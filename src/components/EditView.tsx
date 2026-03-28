@@ -127,7 +127,7 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
     try {
       const newSongs: EditingSong[] = []
       let url: string | null =
-        `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=next,items(track(uri,name,artists))`
+        `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`
 
       while (url) {
         const res = await fetch(url, { headers: { Authorization: `Bearer ${spotify.token}` } })
