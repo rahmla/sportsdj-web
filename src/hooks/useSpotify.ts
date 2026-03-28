@@ -252,7 +252,17 @@ export function useSpotify(): SpotifyHook {
   }, [deviceId, apiFetch])
 
   const stop = useCallback(async () => {
+    const player = playerRef.current
+    if (!player) { await pause(); return }
+    // Fade out over 1 second (20 steps × 50 ms)
+    const steps = 20
+    for (let i = steps; i >= 0; i--) {
+      await player.setVolume(i / steps * 0.8)
+      await new Promise(r => setTimeout(r, 50))
+    }
     await pause()
+    // Restore volume for next play
+    await player.setVolume(0.8)
   }, [pause])
 
   return {

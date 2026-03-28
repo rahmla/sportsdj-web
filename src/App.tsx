@@ -149,7 +149,7 @@ function OpenEventModal({
   )
 }
 
-// ─── Header ───────────────────────────────────────────────────────────────────
+// ─── Header with dropdown menu ────────────────────────────────────────────────
 
 function Header({
   eventName,
@@ -157,56 +157,80 @@ function Header({
   isEditing,
   onEdit,
   onDone,
-}: {
-  eventName: string
-  userName: string
-  isEditing: boolean
-  onEdit: () => void
-  onDone: () => void
-}) {
-  return (
-    <div className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700">
-      <div className="min-w-0">
-        <p className="text-white font-bold text-sm truncate">{eventName}</p>
-        <p className="text-gray-500 text-xs truncate">{userName}</p>
-      </div>
-      {isEditing ? (
-        <button onClick={onDone} className="ml-3 flex-shrink-0 px-4 py-1.5 rounded-full bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors touch-manipulation">Done</button>
-      ) : (
-        <button onClick={onEdit} className="ml-3 flex-shrink-0 px-4 py-1.5 rounded-full bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium transition-colors touch-manipulation">Edit</button>
-      )}
-    </div>
-  )
-}
-
-// ─── Action bar ───────────────────────────────────────────────────────────────
-
-function ActionBar({
   onNew,
   onOpen,
   onExport,
   onImport,
   importError,
 }: {
+  eventName: string
+  userName: string
+  isEditing: boolean
+  onEdit: () => void
+  onDone: () => void
   onNew: () => void
   onOpen: () => void
   onExport: () => void
   onImport: (file: File) => void
   importError: string | null
 }) {
+  const [open, setOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const btn = 'flex-1 py-2 rounded-lg text-xs font-semibold bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-gray-200 transition-colors touch-manipulation'
+
+  const menuItem = 'w-full text-left px-4 py-3 text-sm text-white hover:bg-gray-700 active:bg-gray-600 transition-colors touch-manipulation flex items-center gap-3'
 
   return (
-    <div className="px-3 py-2 bg-gray-900 border-b border-gray-800">
-      <div className="flex gap-2">
-        <button className={btn} onClick={onNew}>New</button>
-        <button className={btn} onClick={onOpen}>Open</button>
-        <button className={btn} onClick={onExport}>Export</button>
-        <button className={btn} onClick={() => fileRef.current?.click()}>Import</button>
-        <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = '' }} />
+    <div className="relative">
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700">
+        <div className="min-w-0">
+          <p className="text-white font-bold text-sm truncate">{eventName}</p>
+          <p className="text-gray-500 text-xs truncate">{userName}</p>
+        </div>
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="ml-3 flex-shrink-0 w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500 transition-colors touch-manipulation"
+          aria-label="Menu"
+        >
+          <span className="block w-4 h-0.5 bg-white rounded" />
+          <span className="block w-4 h-0.5 bg-white rounded" />
+          <span className="block w-4 h-0.5 bg-white rounded" />
+        </button>
       </div>
-      {importError && <p className="text-red-400 text-xs mt-1.5">{importError}</p>}
+
+      {/* Dropdown */}
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-50 w-52 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl overflow-hidden mt-1 mr-1">
+            {isEditing ? (
+              <button className={menuItem} onClick={() => { onDone(); setOpen(false) }}>
+                <span className="text-green-400">✓</span> Done editing
+              </button>
+            ) : (
+              <button className={menuItem} onClick={() => { onEdit(); setOpen(false) }}>
+                <span>✏️</span> Edit event
+              </button>
+            )}
+            <div className="border-t border-gray-700" />
+            <button className={menuItem} onClick={() => { onNew(); setOpen(false) }}>
+              <span>＋</span> New event
+            </button>
+            <button className={menuItem} onClick={() => { onOpen(); setOpen(false) }}>
+              <span>📂</span> Open event
+            </button>
+            <div className="border-t border-gray-700" />
+            <button className={menuItem} onClick={() => { onExport(); setOpen(false) }}>
+              <span>⬇️</span> Export
+            </button>
+            <button className={menuItem} onClick={() => { fileRef.current?.click(); setOpen(false) }}>
+              <span>⬆️</span> Import
+            </button>
+            <input ref={fileRef} type="file" accept=".json" className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = '' }} />
+          </div>
+        </>
+      )}
+      {importError && <p className="text-red-400 text-xs px-4 py-1 bg-gray-800">{importError}</p>}
     </div>
   )
 }
@@ -262,9 +286,6 @@ export default function App() {
           isEditing={isEditing}
           onEdit={() => setIsEditing(true)}
           onDone={() => setIsEditing(false)}
-        />
-
-        <ActionBar
           onNew={() => setShowNew(true)}
           onOpen={() => setShowOpen(true)}
           onExport={() => activeEvent && exportEvent(activeEvent)}
