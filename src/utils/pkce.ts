@@ -1,5 +1,5 @@
 const CLIENT_ID = '1063298d0bd844eaa7df158a4f86f9d2'
-const REDIRECT_URI = 'http://localhost:5173/callback'
+const REDIRECT_URI = 'https://localhost:5173/callback'
 const SCOPES = 'streaming user-read-playback-state user-modify-playback-state user-read-email user-read-private'
 const CODE_VERIFIER_KEY = 'spotify_code_verifier'
 
