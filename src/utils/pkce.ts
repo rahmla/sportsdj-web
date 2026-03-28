@@ -41,6 +41,7 @@ export async function buildAuthURL(verifier: string): Promise<string> {
     scope: SCOPES,
     code_challenge_method: 'S256',
     code_challenge: challenge,
+    show_dialog: 'true',
   })
 
   return `https://accounts.spotify.com/authorize?${params.toString()}`
