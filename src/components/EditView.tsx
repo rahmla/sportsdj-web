@@ -125,6 +125,15 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
     setImportError(null)
 
     try {
+      // Verify playlist scope is working
+      const scopeCheck = await fetch('https://api.spotify.com/v1/me/playlists?limit=1', {
+        headers: { Authorization: `Bearer ${spotify.token}` }
+      })
+      if (!scopeCheck.ok) {
+        const body = await scopeCheck.text()
+        throw new Error(`Scope check failed ${scopeCheck.status}: ${body}`)
+      }
+
       const newSongs: EditingSong[] = []
       let url: string | null =
         `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`
@@ -133,7 +142,7 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
         const res = await fetch(url, { headers: { Authorization: `Bearer ${spotify.token}` } })
         if (!res.ok) {
           const body = await res.text()
-          throw new Error(`Spotify ${res.status}: ${body}`)
+          throw new Error(`Playlist fetch (id: ${playlistId}) ${res.status}: ${body}`)
         }
         const data = await res.json()
 
