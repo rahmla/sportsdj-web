@@ -131,7 +131,10 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
 
       while (url) {
         const res = await fetch(url, { headers: { Authorization: `Bearer ${spotify.token}` } })
-        if (!res.ok) throw new Error(`Spotify error ${res.status}`)
+        if (!res.ok) {
+          const body = await res.text()
+          throw new Error(`Spotify ${res.status}: ${body}`)
+        }
         const data = await res.json()
 
         for (const item of data.items ?? []) {
