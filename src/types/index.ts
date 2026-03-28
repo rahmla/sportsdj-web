@@ -20,10 +20,13 @@ export interface SongItem {
   startOffset: number
 }
 
-export interface SportProfile {
+export interface DJEvent {
   id: string
   name: string
   sport: string
   occasionButtons: OccasionButton[]
   songs: SongItem[]
 }
+
+// Keep backward compat alias so old localStorage data still loads
+export type SportProfile = DJEvent

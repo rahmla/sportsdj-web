@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import type { SportProfile, AudioSource } from '../types'
+import type { DJEvent, AudioSource } from '../types'
 import type { SpotifyHook } from '../hooks/useSpotify'
 import { OccasionButton } from './OccasionButton'
 import { SongRow } from './SongRow'
 import { StopButton } from './StopButton'
 
 interface Props {
-  profile: SportProfile
+  profile: DJEvent
   spotify: SpotifyHook
   onEdit: () => void
 }

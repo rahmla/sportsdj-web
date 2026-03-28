@@ -10,8 +10,14 @@ import {
 const TOKEN_KEY = 'spotify_access_token'
 const API_BASE = 'https://api.spotify.com/v1'
 
+export interface SpotifyUser {
+  id: string
+  displayName: string
+}
+
 export interface SpotifyHook {
   token: string | null
+  user: SpotifyUser | null
   deviceId: string | null
   isReady: boolean
   isPlaying: boolean
@@ -25,6 +31,7 @@ export interface SpotifyHook {
 
 export function useSpotify(): SpotifyHook {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
+  const [user, setUser] = useState<SpotifyUser | null>(null)
   const [deviceId, setDeviceId] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -85,6 +92,17 @@ export function useSpotify(): SpotifyHook {
       }
     })()
   }, [])
+
+  // Fetch user info when token is available
+  useEffect(() => {
+    if (!token) return
+    fetch(`${API_BASE}/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) setUser({ id: data.id, displayName: data.display_name ?? data.id })
+      })
+      .catch(() => {})
+  }, [token])
 
   // Load Spotify SDK script when token becomes available
   useEffect(() => {
@@ -181,6 +199,7 @@ export function useSpotify(): SpotifyHook {
     sdkLoadedRef.current = false
     localStorage.removeItem(TOKEN_KEY)
     setToken(null)
+    setUser(null)
     setDeviceId(null)
     setIsReady(false)
     setIsPlaying(false)
@@ -238,6 +257,7 @@ export function useSpotify(): SpotifyHook {
 
   return {
     token,
+    user,
     deviceId,
     isReady,
     isPlaying,

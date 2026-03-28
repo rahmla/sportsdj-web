@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid'
-import type { OccasionButton, SportProfile } from '../types'
+import type { OccasionButton, DJEvent } from '../types'
 
-const PROFILES_KEY = 'sportsdj_profiles'
-const ACTIVE_PROFILE_KEY = 'sportsdj_active_profile'
+function eventsKey(userId: string) { return `sportsdj_events_${userId}` }
+function activeKey(userId: string) { return `sportsdj_active_${userId}` }
 
 export const DEFAULT_BUTTONS: OccasionButton[] = [
   { id: 'btn-ace',   label: 'ACE',   colorHex: '#7700BB', startOffset: 0 },
@@ -15,38 +15,36 @@ export const DEFAULT_BUTTONS: OccasionButton[] = [
   { id: 'btn-wait',  label: 'WAIT',  colorHex: '#556B2F', startOffset: 0 },
 ]
 
-export function createDefaultProfile(name: string = 'My Team'): SportProfile {
+export function createDefaultEvent(name = 'My Event'): DJEvent {
   return {
     id: uuidv4(),
     name,
-    sport: 'Volleyball',
+    sport: '',
     occasionButtons: DEFAULT_BUTTONS.map(btn => ({ ...btn, id: uuidv4() })),
     songs: [],
   }
 }
 
-export function loadProfiles(): SportProfile[] {
+export function loadEvents(userId: string): DJEvent[] {
   try {
-    const raw = localStorage.getItem(PROFILES_KEY)
-    if (!raw) return [createDefaultProfile()]
-    const parsed = JSON.parse(raw) as SportProfile[]
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      return [createDefaultProfile()]
-    }
+    const raw = localStorage.getItem(eventsKey(userId))
+    if (!raw) return [createDefaultEvent()]
+    const parsed = JSON.parse(raw) as DJEvent[]
+    if (!Array.isArray(parsed) || parsed.length === 0) return [createDefaultEvent()]
     return parsed
   } catch {
-    return [createDefaultProfile()]
+    return [createDefaultEvent()]
   }
 }
 
-export function saveProfiles(profiles: SportProfile[]): void {
-  localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles))
+export function saveEvents(userId: string, events: DJEvent[]): void {
+  localStorage.setItem(eventsKey(userId), JSON.stringify(events))
 }
 
-export function loadActiveProfileId(): string | null {
-  return localStorage.getItem(ACTIVE_PROFILE_KEY)
+export function loadActiveEventId(userId: string): string | null {
+  return localStorage.getItem(activeKey(userId))
 }
 
-export function saveActiveProfileId(id: string): void {
-  localStorage.setItem(ACTIVE_PROFILE_KEY, id)
+export function saveActiveEventId(userId: string, id: string): void {
+  localStorage.setItem(activeKey(userId), id)
 }

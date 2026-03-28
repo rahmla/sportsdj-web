@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import type { SportProfile, OccasionButton, SongItem, AudioSource } from '../types'
+import type { DJEvent, OccasionButton, SongItem, AudioSource } from '../types'
 import type { SpotifyHook } from '../hooks/useSpotify'
 
 interface Props {
-  profile: SportProfile
+  profile: DJEvent
   spotify: SpotifyHook
-  onUpdate: (profile: SportProfile) => void
+  onUpdate: (event: DJEvent) => void
   onDone: () => void
 }
 
@@ -105,7 +105,7 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
   const [expandedSongId, setExpandedSongId] = useState<string | null>(null)
 
   function saveAll() {
-    const updated: SportProfile = {
+    const updated: DJEvent = {
       ...profile,
       name,
       sport,
@@ -147,7 +147,7 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
     <div className="flex flex-col gap-4 p-3 pb-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-white">Edit Profile</h1>
+        <h1 className="text-lg font-bold text-white">Edit Event</h1>
         <button
           onClick={saveAll}
           className="px-4 py-2 bg-green-600 hover:bg-green-500 active:bg-green-700 rounded-lg text-white font-semibold transition-colors touch-manipulation"
@@ -158,7 +158,7 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
 
       {/* Profile Section */}
       <section className="bg-gray-800 rounded-xl p-4 flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Profile</h2>
+        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Event</h2>
         <div className="flex flex-col gap-2">
           <label className="text-xs text-gray-400">Name</label>
           <input
@@ -166,7 +166,7 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Team name"
+            placeholder="Event name"
           />
         </div>
         <div className="flex flex-col gap-2">
