@@ -44,7 +44,12 @@ export function SongRow({ song, onPress, isPlaying }: Props) {
         ].join(' ')}
       />
 
-      <span className="flex-1 text-white font-medium truncate text-sm">{song.title}</span>
+      <span
+        className="flex-1 text-white font-black tracking-widest text-lg"
+        title={song.title}
+      >
+        {song.title.split(/\s+/).map(w => w[0]?.toUpperCase() ?? '').join('')}
+      </span>
 
       {hasSource && (
         <span className="text-green-400 flex-shrink-0">
