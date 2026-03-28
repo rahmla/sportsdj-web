@@ -94,6 +94,14 @@ function fromEditingSong(es: EditingSong): SongItem {
   }
 }
 
+function extractPlaylistId(input: string): string | null {
+  const uriMatch = input.match(/spotify:playlist:([A-Za-z0-9]+)/)
+  if (uriMatch) return uriMatch[1]
+  const urlMatch = input.match(/open\.spotify\.com\/playlist\/([A-Za-z0-9]+)/)
+  if (urlMatch) return urlMatch[1]
+  return null
+}
+
 export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
   const [name, setName] = useState(profile.name)
   const [sport, setSport] = useState(profile.sport)
@@ -103,6 +111,56 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
   const [songs, setSongs] = useState<EditingSong[]>(profile.songs.map(toEditingSong))
   const [expandedButtonId, setExpandedButtonId] = useState<string | null>(null)
   const [expandedSongId, setExpandedSongId] = useState<string | null>(null)
+  const [showPlaylistImport, setShowPlaylistImport] = useState(false)
+  const [playlistInput, setPlaylistInput] = useState('')
+  const [importLoading, setImportLoading] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+
+  async function importFromPlaylist() {
+    const playlistId = extractPlaylistId(playlistInput.trim())
+    if (!playlistId) { setImportError('Invalid playlist URL or URI'); return }
+    if (!spotify.token) { setImportError('Not logged in to Spotify'); return }
+
+    setImportLoading(true)
+    setImportError(null)
+
+    try {
+      const newSongs: EditingSong[] = []
+      let url: string | null =
+        `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=next,items(track(uri,name,artists))`
+
+      while (url) {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${spotify.token}` } })
+        if (!res.ok) throw new Error(`Spotify error ${res.status}`)
+        const data = await res.json()
+
+        for (const item of data.items ?? []) {
+          const track = item?.track
+          if (!track?.uri || track.uri.startsWith('spotify:local:')) continue
+          const artists = (track.artists ?? []).map((a: { name: string }) => a.name).join(', ')
+          const title = artists ? `${track.name} – ${artists}` : track.name
+          newSongs.push({
+            id: uuidv4(),
+            title,
+            uriInput: track.uri,
+            uriName: track.name,
+            uriType: 'spotifyTrack',
+            startOffset: '0',
+            order: songs.length + newSongs.length,
+          })
+        }
+        url = data.next ?? null
+      }
+
+      setSongs(prev => [...prev, ...newSongs])
+      setShowPlaylistImport(false)
+      setPlaylistInput('')
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Import failed')
+    } finally {
+      setImportLoading(false)
+    }
+  }
 
   function saveAll() {
     const updated: DJEvent = {
@@ -327,16 +385,24 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
       <section className="bg-gray-800 rounded-xl p-4 flex flex-col gap-2">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Songs</h2>
-          <button
-            onClick={addSong}
-            className="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
-          >
-            + Add
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setShowPlaylistImport(true); setImportError(null) }}
+              className="px-3 py-1 bg-green-800 hover:bg-green-700 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
+            >
+              + Playlist
+            </button>
+            <button
+              onClick={addSong}
+              className="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
+            >
+              + Add
+            </button>
+          </div>
         </div>
 
         {songs.length === 0 && (
-          <p className="text-gray-500 text-sm text-center py-4">No songs yet. Tap + Add.</p>
+          <p className="text-gray-500 text-sm text-center py-4">No songs yet. Tap + Add or import a playlist.</p>
         )}
 
         {songs.map((song) => (
@@ -432,6 +498,56 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
       >
         Done
       </button>
+
+      {/* Import Playlist Modal */}
+      {showPlaylistImport && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => !importLoading && setShowPlaylistImport(false)}
+        >
+          <div
+            className="bg-gray-800 rounded-2xl p-6 mx-4 w-full max-w-xs shadow-2xl flex flex-col gap-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-white font-bold text-lg">Import Spotify Playlist</h3>
+            <p className="text-gray-400 text-xs">
+              Paste a Spotify playlist URL or URI. All tracks will be added to the songs list.
+            </p>
+            <input
+              type="text"
+              placeholder="https://open.spotify.com/playlist/…"
+              value={playlistInput}
+              onChange={e => setPlaylistInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !importLoading && importFromPlaylist()}
+              className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500"
+              autoFocus
+              disabled={importLoading}
+            />
+            {importError && <p className="text-red-400 text-xs">{importError}</p>}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPlaylistImport(false)}
+                disabled={importLoading}
+                className="flex-1 py-2.5 rounded-xl bg-gray-700 text-white font-medium text-sm hover:bg-gray-600 transition-colors touch-manipulation disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={importFromPlaylist}
+                disabled={importLoading || !playlistInput.trim()}
+                className="flex-1 py-2.5 rounded-xl bg-green-600 disabled:opacity-40 text-white font-semibold text-sm hover:bg-green-500 transition-colors touch-manipulation flex items-center justify-center gap-2"
+              >
+                {importLoading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                    Importing…
+                  </>
+                ) : 'Import'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

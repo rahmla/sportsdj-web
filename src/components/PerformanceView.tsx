@@ -92,11 +92,11 @@ export function PerformanceView({ profile, spotify, onEdit }: Props) {
 
       {/* Songs Section */}
       {profile.songs.length > 0 && (
-        <div>
+        <div className="flex flex-col min-h-0">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
             Songs
           </h2>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[50vh] pr-0.5">
             {profile.songs
               .slice()
               .sort((a, b) => a.order - b.order)
