@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useSpotify } from './hooks/useSpotify'
 import { useProfiles } from './hooks/useProfiles'
 import { ProfileBar } from './components/ProfileBar'
@@ -50,13 +50,9 @@ function AddProfileModal({
             Cancel
           </button>
           <button
-            onClick={() => {
-              if (name.trim()) {
-                onConfirm(name.trim(), sport.trim() || 'Sport')
-              }
-            }}
+            onClick={() => { if (name.trim()) onConfirm(name.trim(), sport.trim() || 'Sport') }}
             disabled={!name.trim()}
-            className="flex-1 py-2.5 rounded-xl bg-blue-600 disabled:bg-gray-600 disabled:opacity-50 text-white font-semibold text-sm hover:bg-blue-500 transition-colors touch-manipulation"
+            className="flex-1 py-2.5 rounded-xl bg-blue-600 disabled:opacity-40 text-white font-semibold text-sm hover:bg-blue-500 transition-colors touch-manipulation"
           >
             Create
           </button>
@@ -66,14 +62,57 @@ function AddProfileModal({
   )
 }
 
+function ActionBar({
+  onNew,
+  onSave,
+  onImport,
+  importError,
+}: {
+  onNew: () => void
+  onSave: () => void
+  onImport: (file: File) => void
+  importError: string | null
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const btnClass =
+    'flex-1 py-2 rounded-lg text-xs font-semibold transition-colors touch-manipulation ' +
+    'bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-gray-200'
+
+  return (
+    <div className="px-3 py-2 bg-gray-900 border-b border-gray-800">
+      <div className="flex gap-2">
+        <button className={btnClass} onClick={onNew}>New</button>
+        <button className={btnClass} onClick={onSave}>Save</button>
+        <button className={btnClass} onClick={() => fileInputRef.current?.click()}>Import</button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) onImport(file)
+            e.target.value = ''
+          }}
+        />
+      </div>
+      {importError && <p className="text-red-400 text-xs mt-1.5">{importError}</p>}
+    </div>
+  )
+}
+
 export default function App() {
   const spotify = useSpotify()
-  const { profiles, activeProfile, setActiveProfileId, updateProfile, addProfile, deleteProfile } =
-    useProfiles()
+  const {
+    profiles, activeProfile, setActiveProfileId,
+    updateProfile, addProfile, deleteProfile,
+    exportProfile, importProfile,
+  } = useProfiles()
+
   const [isEditing, setIsEditing] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
 
-  // Check if we're in the OAuth callback flow
   const isOAuthCallback =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('code')
 
@@ -86,23 +125,30 @@ export default function App() {
     )
   }
 
+  function handleImport(file: File) {
+    setImportError(null)
+    importProfile(file).catch((err: Error) => setImportError(err.message))
+  }
+
   return (
     <div className="min-h-screen bg-gray-900">
-      {/* Center on desktop, phone-width */}
       <div className="mx-auto w-full max-w-[480px] min-h-screen flex flex-col bg-gray-900 shadow-2xl">
-        {/* Profile Bar */}
+
         <ProfileBar
           profiles={profiles}
           activeProfileId={activeProfile?.id ?? null}
-          onSelectProfile={(id) => {
-            setActiveProfileId(id)
-            setIsEditing(false)
-          }}
+          onSelectProfile={(id) => { setActiveProfileId(id); setIsEditing(false) }}
           onAddProfile={() => setShowAddModal(true)}
           onDeleteProfile={deleteProfile}
         />
 
-        {/* Main Content */}
+        <ActionBar
+          onNew={() => setShowAddModal(true)}
+          onSave={() => activeProfile && exportProfile(activeProfile)}
+          onImport={handleImport}
+          importError={importError}
+        />
+
         <div className="flex-1 overflow-y-auto">
           {activeProfile ? (
             isEditing ? (
@@ -127,13 +173,9 @@ export default function App() {
         </div>
       </div>
 
-      {/* Add Profile Modal */}
       {showAddModal && (
         <AddProfileModal
-          onConfirm={(name, sport) => {
-            addProfile(name, sport)
-            setShowAddModal(false)
-          }}
+          onConfirm={(name, sport) => { addProfile(name, sport); setShowAddModal(false) }}
           onCancel={() => setShowAddModal(false)}
         />
       )}

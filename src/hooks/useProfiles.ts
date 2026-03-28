@@ -16,6 +16,8 @@ export interface ProfilesHook {
   updateProfile: (profile: SportProfile) => void
   addProfile: (name: string, sport: string) => void
   deleteProfile: (id: string) => void
+  exportProfile: (profile: SportProfile) => void
+  importProfile: (file: File) => Promise<void>
 }
 
 export function useProfiles(): ProfilesHook {
@@ -34,13 +36,10 @@ export function useProfiles(): ProfilesHook {
     saveProfiles(updated)
   }, [])
 
-  const setActiveProfileId = useCallback(
-    (id: string) => {
-      setActiveProfileIdState(id)
-      saveActiveProfileId(id)
-    },
-    []
-  )
+  const setActiveProfileId = useCallback((id: string) => {
+    setActiveProfileIdState(id)
+    saveActiveProfileId(id)
+  }, [])
 
   const updateProfile = useCallback(
     (profile: SportProfile) => {
@@ -52,9 +51,8 @@ export function useProfiles(): ProfilesHook {
 
   const addProfile = useCallback(
     (name: string, sport: string) => {
-      const defaultProfile = createDefaultProfile(name)
       const newProfile: SportProfile = {
-        ...defaultProfile,
+        ...createDefaultProfile(name),
         id: uuidv4(),
         name,
         sport,
@@ -68,7 +66,7 @@ export function useProfiles(): ProfilesHook {
 
   const deleteProfile = useCallback(
     (id: string) => {
-      if (profiles.length <= 1) return // keep at least one
+      if (profiles.length <= 1) return
       const updated = profiles.filter((p) => p.id !== id)
       setProfiles(updated)
       if (activeProfileId === id) {
@@ -79,6 +77,42 @@ export function useProfiles(): ProfilesHook {
     [profiles, activeProfileId, setProfiles, setActiveProfileId]
   )
 
+  const exportProfile = useCallback((profile: SportProfile) => {
+    const json = JSON.stringify(profile, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${profile.name.replace(/\s+/g, '_')}.sportsdj.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [])
+
+  const importProfile = useCallback(
+    (file: File): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          try {
+            const parsed = JSON.parse(e.target?.result as string) as SportProfile
+            const imported: SportProfile = { ...parsed, id: uuidv4() }
+            const updated = [...profiles, imported]
+            setProfiles(updated)
+            setActiveProfileId(imported.id)
+            resolve()
+          } catch {
+            reject(new Error('Invalid profile file'))
+          }
+        }
+        reader.onerror = () => reject(new Error('Could not read file'))
+        reader.readAsText(file)
+      })
+    },
+    [profiles, setProfiles, setActiveProfileId]
+  )
+
   return {
     profiles,
     activeProfile,
@@ -86,5 +120,7 @@ export function useProfiles(): ProfilesHook {
     updateProfile,
     addProfile,
     deleteProfile,
+    exportProfile,
+    importProfile,
   }
 }
