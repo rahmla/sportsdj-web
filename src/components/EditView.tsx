@@ -137,9 +137,9 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
         const headers = parseCsvRow(lines[0]).map(h => h.trim().toLowerCase())
         const trackNameIdx = headers.findIndex(h => h === 'track name')
         const artistIdx = headers.findIndex(h => h.includes('artist name'))
-        const uriIdx = headers.findIndex(h => h === 'spotify uri')
+        const uriIdx = headers.findIndex(h => h.includes('uri'))
 
-        if (uriIdx === -1) throw new Error('No "Spotify URI" column found. Make sure this is an Exportify CSV.')
+        if (uriIdx === -1) throw new Error('No URI column found. Make sure this is an Exportify CSV.')
 
         const newSongs: EditingSong[] = []
         for (let i = 1; i < lines.length; i++) {
@@ -147,7 +147,7 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
           const uri = cols[uriIdx]?.trim()
           if (!uri?.startsWith('spotify:track:')) continue
           const trackName = trackNameIdx !== -1 ? cols[trackNameIdx]?.trim() ?? '' : ''
-          const artist = artistIdx !== -1 ? cols[artistIdx]?.trim() ?? '' : ''
+          const artist = (artistIdx !== -1 ? cols[artistIdx]?.trim() ?? '' : '').replace(/;/g, ', ')
           const title = trackName && artist ? `${trackName} – ${artist}` : trackName || uri
           newSongs.push({
             id: uuidv4(),
