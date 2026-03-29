@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { DJEvent, OccasionButton, SongItem, AudioSource } from '../types'
 import type { SpotifyHook } from '../hooks/useSpotify'
@@ -94,12 +94,23 @@ function fromEditingSong(es: EditingSong): SongItem {
   }
 }
 
-function extractPlaylistId(input: string): string | null {
-  const uriMatch = input.match(/spotify:playlist:([A-Za-z0-9]+)/)
-  if (uriMatch) return uriMatch[1]
-  const urlMatch = input.match(/open\.spotify\.com\/playlist\/([A-Za-z0-9]+)/)
-  if (urlMatch) return urlMatch[1]
-  return null
+function parseCsvRow(row: string): string[] {
+  const fields: string[] = []
+  let cur = ''
+  let inQuotes = false
+  for (let i = 0; i < row.length; i++) {
+    const ch = row[i]
+    if (ch === '"') {
+      if (inQuotes && row[i + 1] === '"') { cur += '"'; i++ }
+      else inQuotes = !inQuotes
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(cur); cur = ''
+    } else {
+      cur += ch
+    }
+  }
+  fields.push(cur)
+  return fields
 }
 
 export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
@@ -111,143 +122,52 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
   const [songs, setSongs] = useState<EditingSong[]>(profile.songs.map(toEditingSong))
   const [expandedButtonId, setExpandedButtonId] = useState<string | null>(null)
   const [expandedSongId, setExpandedSongId] = useState<string | null>(null)
-  const [showPlaylistImport, setShowPlaylistImport] = useState(false)
-  const [playlistInput, setPlaylistInput] = useState('')
-  const [showUriImport, setShowUriImport] = useState(false)
-  const [uriPasteInput, setUriPasteInput] = useState('')
-  const [importLoading, setImportLoading] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
+  const csvFileRef = useRef<HTMLInputElement>(null)
 
-  async function importFromPlaylist() {
-    const playlistId = extractPlaylistId(playlistInput.trim())
-    if (!playlistId) { setImportError('Invalid playlist URL or URI'); return }
-    if (!spotify.token) { setImportError('Not logged in to Spotify'); return }
-
-    setImportLoading(true)
+  function importFromCsv(file: File) {
     setImportError(null)
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string
+        const lines = text.split(/\r?\n/).filter(l => l.trim())
+        if (lines.length < 2) throw new Error('CSV file is empty')
 
-    try {
-      const newSongs: EditingSong[] = []
+        const headers = parseCsvRow(lines[0]).map(h => h.trim().toLowerCase())
+        const trackNameIdx = headers.findIndex(h => h === 'track name')
+        const artistIdx = headers.findIndex(h => h.includes('artist name'))
+        const uriIdx = headers.findIndex(h => h === 'spotify uri')
 
-      // Fetch the playlist object first — includes first page of tracks
-      const playlistRes = await fetch(
-        `https://api.spotify.com/v1/playlists/${playlistId}`,
-        { headers: { Authorization: `Bearer ${spotify.token}` } }
-      )
-      if (!playlistRes.ok) {
-        const body = await playlistRes.text()
-        throw new Error(`Spotify ${playlistRes.status}: ${body}`)
-      }
-      const playlist = await playlistRes.json()
+        if (uriIdx === -1) throw new Error('No "Spotify URI" column found. Make sure this is an Exportify CSV.')
 
-      function extractItems(items: unknown[]) {
-        for (const item of items ?? []) {
-          const track = (item as { track?: { uri?: string; name?: string; artists?: { name: string }[] } })?.track
-          if (!track?.uri || track.uri.startsWith('spotify:local:')) continue
-          const artists = (track.artists ?? []).map((a) => a.name).join(', ')
-          const title = artists ? `${track.name} – ${artists}` : track.name ?? ''
+        const newSongs: EditingSong[] = []
+        for (let i = 1; i < lines.length; i++) {
+          const cols = parseCsvRow(lines[i])
+          const uri = cols[uriIdx]?.trim()
+          if (!uri?.startsWith('spotify:track:')) continue
+          const trackName = trackNameIdx !== -1 ? cols[trackNameIdx]?.trim() ?? '' : ''
+          const artist = artistIdx !== -1 ? cols[artistIdx]?.trim() ?? '' : ''
+          const title = trackName && artist ? `${trackName} – ${artist}` : trackName || uri
           newSongs.push({
             id: uuidv4(),
             title,
-            uriInput: track.uri,
-            uriName: track.name ?? '',
+            uriInput: uri,
+            uriName: trackName,
             uriType: 'spotifyTrack',
             startOffset: '0',
             order: songs.length + newSongs.length,
           })
         }
+
+        if (newSongs.length === 0) throw new Error('No tracks found in CSV')
+        setSongs(prev => [...prev, ...newSongs])
+      } catch (err) {
+        setImportError(err instanceof Error ? err.message : 'CSV import failed')
       }
-
-      const trackTotal = playlist.tracks?.total ?? 0
-      const itemCount = playlist.tracks?.items?.length ?? 0
-      if (trackTotal === 0) throw new Error(`Playlist "${playlist.name}" has no tracks (total=0)`)
-
-      extractItems(playlist.tracks?.items ?? [])
-      let nextUrl: string | null = playlist.tracks?.next ?? null
-
-      while (nextUrl) {
-        const res = await fetch(nextUrl, { headers: { Authorization: `Bearer ${spotify.token}` } })
-        if (!res.ok) {
-          const body = await res.text()
-          throw new Error(`Spotify ${res.status}: ${body}`)
-        }
-        const data = await res.json()
-        extractItems(data.items ?? [])
-        nextUrl = data.next ?? null
-      }
-
-      if (newSongs.length === 0) {
-        throw new Error(`Parsed 0 tracks from "${playlist.name}" (API reported ${trackTotal} total, ${itemCount} items returned). Track data may be restricted.`)
-      }
-      setSongs(prev => [...prev, ...newSongs])
-      setShowPlaylistImport(false)
-      setPlaylistInput('')
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Import failed')
-    } finally {
-      setImportLoading(false)
     }
-  }
-
-  async function importFromUris() {
-    const lines = uriPasteInput.split(/[\n,]+/).map(l => l.trim()).filter(Boolean)
-    const uris = lines.filter(l =>
-      l.startsWith('spotify:track:') ||
-      l.includes('open.spotify.com/track/')
-    ).map(l => {
-      const urlMatch = l.match(/open\.spotify\.com\/track\/([A-Za-z0-9]+)/)
-      return urlMatch ? `spotify:track:${urlMatch[1]}` : l.split('?')[0].trim()
-    })
-
-    if (uris.length === 0) { setImportError('No valid Spotify track URIs found'); return }
-
-    setImportLoading(true)
-    setImportError(null)
-
-    try {
-      // Try to resolve track names in batches of 50
-      const nameMap: Record<string, string> = {}
-      if (spotify.token) {
-        const ids = uris.map(u => u.replace('spotify:track:', ''))
-        for (let i = 0; i < ids.length; i += 50) {
-          const batch = ids.slice(i, i + 50).join(',')
-          try {
-            const res = await fetch(
-              `https://api.spotify.com/v1/tracks?ids=${batch}`,
-              { headers: { Authorization: `Bearer ${spotify.token}` } }
-            )
-            if (res.ok) {
-              const data = await res.json()
-              for (const track of data.tracks ?? []) {
-                if (!track) continue
-                const artists = (track.artists ?? []).map((a: { name: string }) => a.name).join(', ')
-                nameMap[`spotify:track:${track.id}`] = artists
-                  ? `${track.name} – ${artists}`
-                  : track.name
-              }
-            }
-          } catch { /* fall through to URI-only titles */ }
-        }
-      }
-
-      const newSongs: EditingSong[] = uris.map((uri, i) => ({
-        id: uuidv4(),
-        title: nameMap[uri] ?? uri.replace('spotify:track:', ''),
-        uriInput: uri,
-        uriName: nameMap[uri] ?? '',
-        uriType: 'spotifyTrack' as const,
-        startOffset: '0',
-        order: songs.length + i,
-      }))
-
-      setSongs(prev => [...prev, ...newSongs])
-      setShowUriImport(false)
-      setUriPasteInput('')
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Import failed')
-    } finally {
-      setImportLoading(false)
-    }
+    reader.onerror = () => setImportError('Could not read file')
+    reader.readAsText(file)
   }
 
   function saveAll() {
@@ -475,17 +395,18 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
           <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Songs</h2>
           <div className="flex gap-2">
             <button
-              onClick={() => { setShowPlaylistImport(true); setImportError(null) }}
+              onClick={() => csvFileRef.current?.click()}
               className="px-3 py-1 bg-green-800 hover:bg-green-700 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
             >
-              + Playlist
+              + CSV
             </button>
-            <button
-              onClick={() => { setShowUriImport(true); setImportError(null) }}
-              className="px-3 py-1 bg-purple-800 hover:bg-purple-700 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
-            >
-              + URIs
-            </button>
+            <input
+              ref={csvFileRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) importFromCsv(f); e.target.value = '' }}
+            />
             <button
               onClick={addSong}
               className="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
@@ -495,8 +416,9 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
           </div>
         </div>
 
+        {importError && <p className="text-red-400 text-xs px-1">{importError}</p>}
         {songs.length === 0 && (
-          <p className="text-gray-500 text-sm text-center py-4">No songs yet. Tap + Add or import a playlist.</p>
+          <p className="text-gray-500 text-sm text-center py-4">No songs yet. Tap + CSV to import from Exportify, or + Add to add manually.</p>
         )}
 
         {songs.map((song) => (
@@ -593,104 +515,6 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
         Done
       </button>
 
-      {/* Import URIs Modal */}
-      {showUriImport && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => !importLoading && setShowUriImport(false)}
-        >
-          <div
-            className="bg-gray-800 rounded-2xl p-6 mx-4 w-full max-w-xs shadow-2xl flex flex-col gap-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-white font-bold text-lg">Import Track URIs</h3>
-            <p className="text-gray-400 text-xs">
-              In Spotify: select tracks → right-click → Share → Copy Song Link or Copy Spotify URI. Paste one per line below.
-            </p>
-            <textarea
-              placeholder={'spotify:track:4uLU6hMCjMI75M1A2tKUQC\nhttps://open.spotify.com/track/…'}
-              value={uriPasteInput}
-              onChange={e => setUriPasteInput(e.target.value)}
-              rows={6}
-              className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 resize-none"
-              autoFocus
-              disabled={importLoading}
-            />
-            {importError && <p className="text-red-400 text-xs">{importError}</p>}
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowUriImport(false)}
-                disabled={importLoading}
-                className="flex-1 py-2.5 rounded-xl bg-gray-700 text-white font-medium text-sm hover:bg-gray-600 transition-colors touch-manipulation disabled:opacity-40"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={importFromUris}
-                disabled={importLoading || !uriPasteInput.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-purple-700 disabled:opacity-40 text-white font-semibold text-sm hover:bg-purple-600 transition-colors touch-manipulation flex items-center justify-center gap-2"
-              >
-                {importLoading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-                    Importing…
-                  </>
-                ) : 'Import'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Import Playlist Modal */}
-      {showPlaylistImport && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => !importLoading && setShowPlaylistImport(false)}
-        >
-          <div
-            className="bg-gray-800 rounded-2xl p-6 mx-4 w-full max-w-xs shadow-2xl flex flex-col gap-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-white font-bold text-lg">Import Spotify Playlist</h3>
-            <p className="text-gray-400 text-xs">
-              Paste a Spotify playlist URL or URI. All tracks will be added to the songs list.
-            </p>
-            <input
-              type="text"
-              placeholder="https://open.spotify.com/playlist/…"
-              value={playlistInput}
-              onChange={e => setPlaylistInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !importLoading && importFromPlaylist()}
-              className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500"
-              autoFocus
-              disabled={importLoading}
-            />
-            {importError && <p className="text-red-400 text-xs">{importError}</p>}
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowPlaylistImport(false)}
-                disabled={importLoading}
-                className="flex-1 py-2.5 rounded-xl bg-gray-700 text-white font-medium text-sm hover:bg-gray-600 transition-colors touch-manipulation disabled:opacity-40"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={importFromPlaylist}
-                disabled={importLoading || !playlistInput.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-green-600 disabled:opacity-40 text-white font-semibold text-sm hover:bg-green-500 transition-colors touch-manipulation flex items-center justify-center gap-2"
-              >
-                {importLoading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-                    Importing…
-                  </>
-                ) : 'Import'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
