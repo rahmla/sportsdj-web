@@ -156,6 +156,10 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
         }
       }
 
+      const trackTotal = playlist.tracks?.total ?? 0
+      const itemCount = playlist.tracks?.items?.length ?? 0
+      if (trackTotal === 0) throw new Error(`Playlist "${playlist.name}" has no tracks (total=0)`)
+
       extractItems(playlist.tracks?.items ?? [])
       let nextUrl: string | null = playlist.tracks?.next ?? null
 
@@ -171,7 +175,7 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
       }
 
       if (newSongs.length === 0) {
-        throw new Error('No tracks found in that playlist. Make sure it has songs and try again.')
+        throw new Error(`Parsed 0 tracks from "${playlist.name}" (API reported ${trackTotal} total, ${itemCount} items returned). Track data may be restricted.`)
       }
       setSongs(prev => [...prev, ...newSongs])
       setShowPlaylistImport(false)
