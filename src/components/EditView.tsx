@@ -62,7 +62,7 @@ function fromEditingButton(eb: EditingButton): OccasionButton {
     ? {
         type: isPlaylist ? 'spotifyPlaylist' : 'spotifyTrack',
         uri: eb.uriInput.trim(),
-        name: eb.uriName.trim() || eb.label,
+        name: eb.label,
       }
     : undefined
   return {
@@ -355,18 +355,6 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
                     onChange={(e) => updateButton(btn.id, { uriInput: e.target.value })}
                     className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                     placeholder="spotify:track:0abc…"
-                  />
-                </div>
-
-                {/* Display Name */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-400">Display Name (optional)</label>
-                  <input
-                    type="text"
-                    value={btn.uriName}
-                    onChange={(e) => updateButton(btn.id, { uriName: e.target.value })}
-                    className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Song name"
                   />
                 </div>
 
