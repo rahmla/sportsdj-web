@@ -170,6 +170,9 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
         nextUrl = data.next ?? null
       }
 
+      if (newSongs.length === 0) {
+        throw new Error('No tracks found in that playlist. Make sure it has songs and try again.')
+      }
       setSongs(prev => [...prev, ...newSongs])
       setShowPlaylistImport(false)
       setPlaylistInput('')
