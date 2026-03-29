@@ -10,9 +10,12 @@ import type { DJEvent } from './types'
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center gap-6 px-6">
-      <div className="text-center">
-        <h1 className="text-4xl font-black text-white tracking-tight mb-2">SportsDJ</h1>
-        <p className="text-gray-400 text-sm">DJ soundboard for sports events</p>
+      <div className="text-center flex flex-col items-center gap-3">
+        <img src="/logo.png" alt="SportsDJ" className="w-24 h-24 rounded-2xl shadow-2xl" />
+        <div>
+          <h1 className="text-4xl font-black text-white tracking-tight mb-1">SportsDJ</h1>
+          <p className="text-gray-400 text-sm">DJ soundboard for sports events</p>
+        </div>
       </div>
       <button
         onClick={onLogin}
@@ -162,6 +165,10 @@ function Header({
   onExport,
   onImport,
   importError,
+  spotifyReady,
+  spotifyToken,
+  onSpotifyLogin,
+  onSpotifyLogout,
 }: {
   eventName: string
   userName: string
@@ -173,6 +180,10 @@ function Header({
   onExport: () => void
   onImport: (file: File) => void
   importError: string | null
+  spotifyReady: boolean
+  spotifyToken: string | null
+  onSpotifyLogin: () => void
+  onSpotifyLogout: () => void
 }) {
   const [open, setOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -181,10 +192,13 @@ function Header({
 
   return (
     <div className="relative">
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700">
-        <div className="min-w-0">
-          <p className="text-white font-bold text-sm truncate">{eventName}</p>
-          <p className="text-gray-500 text-xs truncate">{userName}</p>
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-800 border-b border-gray-700">
+        <div className="flex items-center gap-2 min-w-0">
+          <img src="/logo.png" alt="SportsDJ" className="w-8 h-8 rounded-lg flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="text-white font-bold text-sm truncate">{eventName}</p>
+            <p className="text-gray-500 text-xs truncate">{userName}</p>
+          </div>
         </div>
         <button
           onClick={() => setOpen(o => !o)}
@@ -227,6 +241,19 @@ function Header({
             </button>
             <input ref={fileRef} type="file" accept=".json" className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = '' }} />
+            <div className="border-t border-gray-700" />
+            {spotifyToken ? (
+              <button className={menuItem} onClick={() => { onSpotifyLogout(); setOpen(false) }}>
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${spotifyReady ? 'bg-green-400' : 'bg-yellow-400'}`} />
+                <span>{spotifyReady ? 'Spotify connected' : 'Spotify connecting…'}</span>
+                <span className="ml-auto text-xs text-gray-500">Logout</span>
+              </button>
+            ) : (
+              <button className={menuItem} onClick={() => { onSpotifyLogin(); setOpen(false) }}>
+                <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                Connect Spotify
+              </button>
+            )}
           </div>
         </>
       )}
@@ -291,6 +318,10 @@ export default function App() {
           onExport={() => activeEvent && exportEvent(activeEvent)}
           onImport={handleImport}
           importError={importError}
+          spotifyReady={spotify.isReady}
+          spotifyToken={spotify.token}
+          onSpotifyLogin={spotify.login}
+          onSpotifyLogout={spotify.logout}
         />
 
         <div className="flex-1 overflow-y-auto">
@@ -298,7 +329,6 @@ export default function App() {
             isEditing ? (
               <EditView
                 profile={activeEvent}
-                spotify={spotify}
                 onUpdate={updateEvent}
                 onDone={() => setIsEditing(false)}
               />

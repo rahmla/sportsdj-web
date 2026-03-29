@@ -1,11 +1,8 @@
 import { useState, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { DJEvent, OccasionButton, SongItem, AudioSource } from '../types'
-import type { SpotifyHook } from '../hooks/useSpotify'
-
 interface Props {
   profile: DJEvent
-  spotify: SpotifyHook
   onUpdate: (event: DJEvent) => void
   onDone: () => void
 }
@@ -113,7 +110,7 @@ function parseCsvRow(row: string): string[] {
   return fields
 }
 
-export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
+export function EditView({ profile, onUpdate, onDone }: Props) {
   const [name, setName] = useState(profile.name)
   const [sport, setSport] = useState(profile.sport)
   const [buttons, setButtons] = useState<EditingButton[]>(
@@ -245,49 +242,6 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
             placeholder="Sport"
           />
         </div>
-      </section>
-
-      {/* Spotify Section */}
-      <section className="bg-gray-800 rounded-xl p-4 flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Spotify</h2>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div
-              className={[
-                'w-2.5 h-2.5 rounded-full',
-                spotify.isReady ? 'bg-green-400' : 'bg-red-500',
-              ].join(' ')}
-            />
-            <span className="text-sm text-gray-300">
-              {spotify.isReady
-                ? 'Connected'
-                : spotify.token
-                ? 'Connecting…'
-                : 'Not connected'}
-            </span>
-          </div>
-          {spotify.token ? (
-            <button
-              onClick={spotify.logout}
-              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-white transition-colors touch-manipulation"
-            >
-              Logout
-            </button>
-          ) : (
-            <button
-              onClick={spotify.login}
-              className="px-3 py-1.5 bg-green-700 hover:bg-green-600 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
-            >
-              Login with Spotify
-            </button>
-          )}
-        </div>
-        {spotify.error && (
-          <p className="text-xs text-red-400">{spotify.error}</p>
-        )}
-        {spotify.token && !spotify.isReady && (
-          <p className="text-xs text-gray-500">Waiting for player… (Spotify Premium required)</p>
-        )}
       </section>
 
       {/* Occasion Buttons Section */}
