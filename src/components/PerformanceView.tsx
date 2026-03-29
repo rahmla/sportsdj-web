@@ -69,7 +69,7 @@ export function PerformanceView({ profile, spotify, onEdit }: Props) {
 
       {/* Occasion Buttons Grid: 4 columns, 2 rows */}
       <div className="grid grid-cols-4 gap-2" style={{ gridAutoRows: '1fr' }}>
-        {profile.occasionButtons.slice(0, 8).map((btn) => (
+        {profile.occasionButtons.map((btn) => (
           <OccasionButton
             key={btn.id}
             button={btn}

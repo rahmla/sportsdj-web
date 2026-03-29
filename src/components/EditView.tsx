@@ -292,9 +292,41 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
 
       {/* Occasion Buttons Section */}
       <section className="bg-gray-800 rounded-xl p-4 flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-1">
-          Occasion Buttons
-        </h2>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+            Occasion Buttons
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">{buttons.length / 4} / 5 rows</span>
+            {buttons.length > 4 && (
+              <button
+                onClick={() => {
+                  setButtons(prev => prev.slice(0, -4))
+                  setExpandedButtonId(null)
+                }}
+                className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
+              >
+                − Row
+              </button>
+            )}
+            {buttons.length < 20 && (
+              <button
+                onClick={() => setButtons(prev => [...prev, ...Array.from({ length: 4 }, () => ({
+                  id: uuidv4(),
+                  label: 'NON',
+                  colorHex: '#666666',
+                  uriInput: '',
+                  uriName: '',
+                  uriType: 'spotifyTrack' as const,
+                  startOffset: '0',
+                }))])}
+                className="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
+              >
+                + Row
+              </button>
+            )}
+          </div>
+        </div>
         {buttons.map((btn) => (
           <div key={btn.id} className="rounded-lg overflow-hidden">
             {/* Button row */}
