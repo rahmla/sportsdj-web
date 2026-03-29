@@ -186,6 +186,7 @@ function Header({
   onSpotifyLogout: () => void
 }) {
   const [open, setOpen] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const menuItem = 'w-full text-left px-4 py-3 text-sm text-white hover:bg-gray-700 active:bg-gray-600 transition-colors touch-manipulation flex items-center gap-3'
@@ -242,6 +243,10 @@ function Header({
             <input ref={fileRef} type="file" accept=".json" className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = '' }} />
             <div className="border-t border-gray-700" />
+            <button className={menuItem} onClick={() => { setShowAbout(true); setOpen(false) }}>
+              <span>ℹ️</span> About
+            </button>
+            <div className="border-t border-gray-700" />
             {spotifyToken ? (
               <button className={menuItem} onClick={() => { onSpotifyLogout(); setOpen(false) }}>
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${spotifyReady ? 'bg-green-400' : 'bg-yellow-400'}`} />
@@ -258,6 +263,27 @@ function Header({
         </>
       )}
       {importError && <p className="text-red-400 text-xs px-4 py-1 bg-gray-800">{importError}</p>}
+
+      {showAbout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAbout(false)}>
+          <div className="bg-gray-800 rounded-2xl p-6 mx-4 w-full max-w-xs shadow-2xl flex flex-col items-center gap-4 text-center" onClick={e => e.stopPropagation()}>
+            <img src="/logo.png" alt="SportsDJ" className="w-20 h-20 rounded-2xl shadow-lg" />
+            <div>
+              <h2 className="text-white font-bold text-xl mb-1">SportsDJ Web</h2>
+              <p className="text-gray-400 text-sm">DJ soundboard for sports events</p>
+            </div>
+            <p className="text-gray-300 text-sm leading-relaxed">
+              Built by <span className="text-white font-semibold">Lars Rahm</span> and <span className="text-white font-semibold">Claude</span> (Anthropic).
+            </p>
+            <button
+              onClick={() => setShowAbout(false)}
+              className="w-full py-2.5 rounded-xl bg-gray-700 text-white text-sm font-medium hover:bg-gray-600 transition-colors touch-manipulation"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
