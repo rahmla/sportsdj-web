@@ -126,33 +126,48 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
 
     try {
       const newSongs: EditingSong[] = []
-      let url: string | null =
-        `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`
 
-      while (url) {
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${spotify.token}` } })
-        if (!res.ok) {
-          const body = await res.text()
-          throw new Error(`Spotify ${res.status}: ${body}`)
-        }
-        const data = await res.json()
+      // Fetch the playlist object first — includes first page of tracks
+      const playlistRes = await fetch(
+        `https://api.spotify.com/v1/playlists/${playlistId}`,
+        { headers: { Authorization: `Bearer ${spotify.token}` } }
+      )
+      if (!playlistRes.ok) {
+        const body = await playlistRes.text()
+        throw new Error(`Spotify ${playlistRes.status}: ${body}`)
+      }
+      const playlist = await playlistRes.json()
 
-        for (const item of data.items ?? []) {
-          const track = item?.track
+      function extractItems(items: unknown[]) {
+        for (const item of items ?? []) {
+          const track = (item as { track?: { uri?: string; name?: string; artists?: { name: string }[] } })?.track
           if (!track?.uri || track.uri.startsWith('spotify:local:')) continue
-          const artists = (track.artists ?? []).map((a: { name: string }) => a.name).join(', ')
-          const title = artists ? `${track.name} – ${artists}` : track.name
+          const artists = (track.artists ?? []).map((a) => a.name).join(', ')
+          const title = artists ? `${track.name} – ${artists}` : track.name ?? ''
           newSongs.push({
             id: uuidv4(),
             title,
             uriInput: track.uri,
-            uriName: track.name,
+            uriName: track.name ?? '',
             uriType: 'spotifyTrack',
             startOffset: '0',
             order: songs.length + newSongs.length,
           })
         }
-        url = data.next ?? null
+      }
+
+      extractItems(playlist.tracks?.items ?? [])
+      let nextUrl: string | null = playlist.tracks?.next ?? null
+
+      while (nextUrl) {
+        const res = await fetch(nextUrl, { headers: { Authorization: `Bearer ${spotify.token}` } })
+        if (!res.ok) {
+          const body = await res.text()
+          throw new Error(`Spotify ${res.status}: ${body}`)
+        }
+        const data = await res.json()
+        extractItems(data.items ?? [])
+        nextUrl = data.next ?? null
       }
 
       setSongs(prev => [...prev, ...newSongs])
