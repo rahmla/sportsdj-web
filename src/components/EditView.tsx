@@ -352,26 +352,48 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
             {/* Expanded edit panel */}
             {expandedButtonId === btn.id && (
               <div className="bg-gray-750 border-t border-gray-600 px-3 py-3 flex flex-col gap-3 bg-gray-900/50">
-                {/* Label + Color row */}
-                <div className="flex gap-2">
-                  <div className="flex-1 flex flex-col gap-1">
-                    <label className="text-xs text-gray-400">Label</label>
-                    <input
-                      type="text"
-                      value={btn.label}
-                      onChange={(e) => updateButton(btn.id, { label: e.target.value })}
-                      className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      maxLength={8}
-                    />
+                {/* Label */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-400">Label</label>
+                  <input
+                    type="text"
+                    value={btn.label}
+                    onChange={(e) => updateButton(btn.id, { label: e.target.value })}
+                    className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={8}
+                  />
+                </div>
+
+                {/* Color */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs text-gray-400">Color</label>
+                  <div className="grid grid-cols-8 gap-1.5">
+                    {[
+                      '#CC0000','#FF4500','#FF8C00','#FFD700',
+                      '#228B22','#007A7A','#0044CC','#7700BB',
+                      '#C71585','#FF69B4','#FFFFFF','#AAAAAA',
+                      '#666666','#333333','#1a1a2e','#8B4513',
+                    ].map(color => (
+                      <button
+                        key={color}
+                        onClick={() => updateButton(btn.id, { colorHex: color })}
+                        className="w-full aspect-square rounded-md border-2 transition-transform active:scale-90 touch-manipulation"
+                        style={{
+                          backgroundColor: color,
+                          borderColor: btn.colorHex === color ? '#ffffff' : 'transparent',
+                        }}
+                      />
+                    ))}
                   </div>
-                  <div className="flex flex-col gap-1 items-center">
-                    <label className="text-xs text-gray-400">Color</label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-500">Custom:</label>
                     <input
                       type="color"
                       value={btn.colorHex}
                       onChange={(e) => updateButton(btn.id, { colorHex: e.target.value })}
-                      className="w-12 h-10 rounded-lg cursor-pointer bg-transparent border-0 p-0"
+                      className="w-10 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
                     />
+                    <span className="text-xs text-gray-500 font-mono">{btn.colorHex}</span>
                   </div>
                 </div>
 
