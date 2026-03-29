@@ -429,9 +429,9 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
                 onClick={() =>
                   setExpandedSongId(expandedSongId === song.id ? null : song.id)
                 }
-                className="flex-1 flex items-center gap-2 text-left touch-manipulation hover:opacity-80 active:opacity-60 transition-opacity"
+                className="flex-1 min-w-0 flex items-center gap-2 text-left touch-manipulation hover:opacity-80 active:opacity-60 transition-opacity"
               >
-                <span className="flex-1 text-white text-sm truncate">{song.title}</span>
+                <span className="flex-1 min-w-0 text-white text-sm truncate">{song.title}</span>
                 {song.uriInput && <span className="text-green-400 text-xs">●</span>}
                 <span className="text-gray-400 text-xs">
                   {expandedSongId === song.id ? '▲' : '▼'}
