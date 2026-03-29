@@ -113,6 +113,8 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
   const [expandedSongId, setExpandedSongId] = useState<string | null>(null)
   const [showPlaylistImport, setShowPlaylistImport] = useState(false)
   const [playlistInput, setPlaylistInput] = useState('')
+  const [showUriImport, setShowUriImport] = useState(false)
+  const [uriPasteInput, setUriPasteInput] = useState('')
   const [importLoading, setImportLoading] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
 
@@ -180,6 +182,67 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
       setSongs(prev => [...prev, ...newSongs])
       setShowPlaylistImport(false)
       setPlaylistInput('')
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Import failed')
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
+  async function importFromUris() {
+    const lines = uriPasteInput.split(/[\n,]+/).map(l => l.trim()).filter(Boolean)
+    const uris = lines.filter(l =>
+      l.startsWith('spotify:track:') ||
+      l.includes('open.spotify.com/track/')
+    ).map(l => {
+      const urlMatch = l.match(/open\.spotify\.com\/track\/([A-Za-z0-9]+)/)
+      return urlMatch ? `spotify:track:${urlMatch[1]}` : l.split('?')[0].trim()
+    })
+
+    if (uris.length === 0) { setImportError('No valid Spotify track URIs found'); return }
+
+    setImportLoading(true)
+    setImportError(null)
+
+    try {
+      // Try to resolve track names in batches of 50
+      const nameMap: Record<string, string> = {}
+      if (spotify.token) {
+        const ids = uris.map(u => u.replace('spotify:track:', ''))
+        for (let i = 0; i < ids.length; i += 50) {
+          const batch = ids.slice(i, i + 50).join(',')
+          try {
+            const res = await fetch(
+              `https://api.spotify.com/v1/tracks?ids=${batch}`,
+              { headers: { Authorization: `Bearer ${spotify.token}` } }
+            )
+            if (res.ok) {
+              const data = await res.json()
+              for (const track of data.tracks ?? []) {
+                if (!track) continue
+                const artists = (track.artists ?? []).map((a: { name: string }) => a.name).join(', ')
+                nameMap[`spotify:track:${track.id}`] = artists
+                  ? `${track.name} – ${artists}`
+                  : track.name
+              }
+            }
+          } catch { /* fall through to URI-only titles */ }
+        }
+      }
+
+      const newSongs: EditingSong[] = uris.map((uri, i) => ({
+        id: uuidv4(),
+        title: nameMap[uri] ?? uri.replace('spotify:track:', ''),
+        uriInput: uri,
+        uriName: nameMap[uri] ?? '',
+        uriType: 'spotifyTrack' as const,
+        startOffset: '0',
+        order: songs.length + i,
+      }))
+
+      setSongs(prev => [...prev, ...newSongs])
+      setShowUriImport(false)
+      setUriPasteInput('')
     } catch (err) {
       setImportError(err instanceof Error ? err.message : 'Import failed')
     } finally {
@@ -418,6 +481,12 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
               + Playlist
             </button>
             <button
+              onClick={() => { setShowUriImport(true); setImportError(null) }}
+              className="px-3 py-1 bg-purple-800 hover:bg-purple-700 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
+            >
+              + URIs
+            </button>
+            <button
               onClick={addSong}
               className="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
             >
@@ -523,6 +592,55 @@ export function EditView({ profile, spotify, onUpdate, onDone }: Props) {
       >
         Done
       </button>
+
+      {/* Import URIs Modal */}
+      {showUriImport && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => !importLoading && setShowUriImport(false)}
+        >
+          <div
+            className="bg-gray-800 rounded-2xl p-6 mx-4 w-full max-w-xs shadow-2xl flex flex-col gap-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-white font-bold text-lg">Import Track URIs</h3>
+            <p className="text-gray-400 text-xs">
+              In Spotify: select tracks → right-click → Share → Copy Song Link or Copy Spotify URI. Paste one per line below.
+            </p>
+            <textarea
+              placeholder={'spotify:track:4uLU6hMCjMI75M1A2tKUQC\nhttps://open.spotify.com/track/…'}
+              value={uriPasteInput}
+              onChange={e => setUriPasteInput(e.target.value)}
+              rows={6}
+              className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 resize-none"
+              autoFocus
+              disabled={importLoading}
+            />
+            {importError && <p className="text-red-400 text-xs">{importError}</p>}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowUriImport(false)}
+                disabled={importLoading}
+                className="flex-1 py-2.5 rounded-xl bg-gray-700 text-white font-medium text-sm hover:bg-gray-600 transition-colors touch-manipulation disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={importFromUris}
+                disabled={importLoading || !uriPasteInput.trim()}
+                className="flex-1 py-2.5 rounded-xl bg-purple-700 disabled:opacity-40 text-white font-semibold text-sm hover:bg-purple-600 transition-colors touch-manipulation flex items-center justify-center gap-2"
+              >
+                {importLoading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                    Importing…
+                  </>
+                ) : 'Import'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Import Playlist Modal */}
       {showPlaylistImport && (
