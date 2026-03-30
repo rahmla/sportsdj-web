@@ -18,6 +18,7 @@ export interface SongItem {
   audioSource?: AudioSource
   order: number
   startOffset: number
+  playCount?: number
 }
 
 export interface DJEvent {

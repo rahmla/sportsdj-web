@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { DJEvent, AudioSource } from '../types'
 import type { SpotifyHook } from '../hooks/useSpotify'
 import { OccasionButton } from './OccasionButton'
@@ -8,20 +8,66 @@ import { StopButton } from './StopButton'
 interface Props {
   profile: DJEvent
   spotify: SpotifyHook
-  onEdit: () => void
+  onEdit: (lastPlayedSongId?: string) => void
+  onUpdate: (event: DJEvent) => void
 }
 
-export function PerformanceView({ profile, spotify, onEdit }: Props) {
+export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
   const [playingSourceUri, setPlayingSourceUri] = useState<string | null>(null)
+  const [lastPlayedSongId, setLastPlayedSongId] = useState<string | undefined>(undefined)
+  const [elapsed, setElapsed] = useState(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  async function handlePlay(source: AudioSource, offset: number) {
+  function startTimer(offsetSeconds = 0) {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    setElapsed(offsetSeconds)
+    intervalRef.current = setInterval(() => setElapsed(s => s + 1), 1000)
+  }
+
+  function stopTimer() {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+    setElapsed(0)
+  }
+
+  useEffect(() => {
+    if (!spotify.isPlaying) stopTimer()
+  }, [spotify.isPlaying])
+
+  useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current) }, [])
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.code === 'Space' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault()
+        if (spotify.isPlaying) handleStop()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [spotify.isPlaying])
+
+  async function handlePlay(source: AudioSource, offset: number, songId?: string) {
     if (!source) return
     setPlayingSourceUri(source.uri)
+    startTimer(offset)
     await spotify.playUri(source.uri, offset)
+    if (songId) {
+      setLastPlayedSongId(songId)
+      onUpdate({
+        ...profile,
+        songs: profile.songs.map(s =>
+          s.id === songId ? { ...s, playCount: (s.playCount ?? 0) + 1 } : s
+        ),
+      })
+    }
   }
 
   async function handleStop() {
     setPlayingSourceUri(null)
+    stopTimer()
     await spotify.stop()
   }
 
@@ -52,7 +98,7 @@ export function PerformanceView({ profile, spotify, onEdit }: Props) {
             <div className="text-xs text-gray-400 leading-tight">{profile.sport}</div>
           </div>
           <button
-            onClick={onEdit}
+            onClick={async () => { await handleStop(); onEdit(lastPlayedSongId) }}
             className="ml-1 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white text-sm font-medium transition-colors touch-manipulation"
           >
             Edit
@@ -88,7 +134,7 @@ export function PerformanceView({ profile, spotify, onEdit }: Props) {
       </div>
 
       {/* Stop Button */}
-      <StopButton onStop={handleStop} disabled={!spotify.isPlaying} />
+      <StopButton onStop={handleStop} disabled={!spotify.isPlaying} elapsed={elapsed} />
 
       {/* Songs Section */}
       {profile.songs.length > 0 && (
@@ -106,7 +152,7 @@ export function PerformanceView({ profile, spotify, onEdit }: Props) {
                   song={song}
                   onPress={() => {
                     if (song.audioSource) {
-                      handlePlay(song.audioSource, song.startOffset)
+                      handlePlay(song.audioSource, song.startOffset, song.id)
                     }
                   }}
                   isPlaying={
@@ -117,6 +163,17 @@ export function PerformanceView({ profile, spotify, onEdit }: Props) {
                 />
               ))}
           </div>
+          {profile.songs.some(s => (s.playCount ?? 0) > 0) && (
+            <button
+              onClick={() => onUpdate({
+                ...profile,
+                songs: profile.songs.map(s => ({ ...s, playCount: 0 })),
+              })}
+              className="mt-2 w-full py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs font-semibold transition-colors touch-manipulation"
+            >
+              Reset play counters
+            </button>
+          )}
         </div>
       )}
     </div>

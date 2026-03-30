@@ -4,6 +4,7 @@ import { useEvents } from './hooks/useEvents'
 import { PerformanceView } from './components/PerformanceView'
 import { EditView } from './components/EditView'
 import type { DJEvent } from './types'
+import { BUILT_IN_TEMPLATES } from './utils/templates'
 
 // ─── Login screen ────────────────────────────────────────────────────────────
 
@@ -41,9 +42,11 @@ function SpotifyLogo() {
 
 function NewEventModal({
   onConfirm,
+  onConfirmFromTemplate,
   onCancel,
 }: {
   onConfirm: (name: string, sport: string) => void
+  onConfirmFromTemplate: (template: DJEvent) => void
   onCancel: () => void
 }) {
   const [name, setName] = useState('')
@@ -51,28 +54,56 @@ function NewEventModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onCancel}>
-      <div className="bg-gray-800 rounded-2xl p-6 mx-4 w-full max-w-xs shadow-2xl" onClick={e => e.stopPropagation()}>
-        <h3 className="text-white font-bold text-lg mb-4">New Event</h3>
-        <div className="flex flex-col gap-3 mb-5">
-          <input
-            type="text"
-            placeholder="Event name (e.g. Volleyboll SM)"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && name.trim() && onConfirm(name.trim(), sport.trim())}
-            className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500"
-            autoFocus
-          />
-          <input
-            type="text"
-            placeholder="Sport (e.g. Volleyball)"
-            value={sport}
-            onChange={e => setSport(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && name.trim() && onConfirm(name.trim(), sport.trim())}
-            className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500"
-          />
+      <div className="bg-gray-800 rounded-2xl mx-4 w-full max-w-xs shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 pt-5 pb-4">
+          <h3 className="text-white font-bold text-lg mb-4">New Event</h3>
+
+          {/* Templates */}
+          {BUILT_IN_TEMPLATES.length > 0 && (
+            <>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">From template</p>
+              <div className="flex flex-col gap-2 mb-4">
+                {BUILT_IN_TEMPLATES.map(tpl => (
+                  <button
+                    key={tpl.id}
+                    onClick={() => { onConfirmFromTemplate(tpl); onCancel() }}
+                    className="w-full text-left px-3 py-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500 transition-colors touch-manipulation"
+                  >
+                    <p className="text-blue-300 font-semibold text-sm">{tpl.name}</p>
+                    {tpl.sport && <p className="text-gray-500 text-xs">{tpl.sport}</p>}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-gray-700" />
+                <span className="text-xs text-gray-600">or start blank</span>
+                <div className="flex-1 h-px bg-gray-700" />
+              </div>
+            </>
+          )}
+
+          {/* Blank event form */}
+          <div className="flex flex-col gap-3">
+            <input
+              type="text"
+              placeholder="Event name (e.g. Volleyboll SM)"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && name.trim() && onConfirm(name.trim(), sport.trim())}
+              className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500"
+              autoFocus
+            />
+            <input
+              type="text"
+              placeholder="Sport (e.g. Volleyball)"
+              value={sport}
+              onChange={e => setSport(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && name.trim() && onConfirm(name.trim(), sport.trim())}
+              className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500"
+            />
+          </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 px-5 pb-5">
           <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl bg-gray-700 text-white font-medium text-sm hover:bg-gray-600 transition-colors touch-manipulation">Cancel</button>
           <button
             onClick={() => name.trim() && onConfirm(name.trim(), sport.trim())}
@@ -132,7 +163,8 @@ function OpenEventModal({
             </li>
           ))}
         </ul>
-        <div className="px-5 py-3 border-t border-gray-700">
+
+<div className="px-5 py-3 border-t border-gray-700">
           <button onClick={onCancel} className="w-full py-2 rounded-xl bg-gray-700 text-white text-sm font-medium hover:bg-gray-600 transition-colors touch-manipulation">Close</button>
         </div>
       </div>
@@ -187,6 +219,7 @@ function Header({
 }) {
   const [open, setOpen] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const menuItem = 'w-full text-left px-4 py-3 text-sm text-white hover:bg-gray-700 active:bg-gray-600 transition-colors touch-manipulation flex items-center gap-3'
@@ -243,6 +276,9 @@ function Header({
             <input ref={fileRef} type="file" accept=".json" className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = '' }} />
             <div className="border-t border-gray-700" />
+            <button className={menuItem} onClick={() => { setShowHelp(true); setOpen(false) }}>
+              <span>❓</span> Help
+            </button>
             <button className={menuItem} onClick={() => { setShowAbout(true); setOpen(false) }}>
               <span>ℹ️</span> About
             </button>
@@ -263,6 +299,70 @@ function Header({
         </>
       )}
       {importError && <p className="text-red-400 text-xs px-4 py-1 bg-gray-800">{importError}</p>}
+
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
+          <div className="bg-gray-800 rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-700 flex-shrink-0">
+              <h2 className="text-white font-bold text-lg">Help</h2>
+              <button onClick={() => setShowHelp(false)} className="text-gray-400 hover:text-white text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-700 transition-colors">✕</button>
+            </div>
+            <div className="overflow-y-auto px-5 py-4 flex flex-col gap-5 text-sm">
+
+              <section className="flex flex-col gap-2">
+                <h3 className="text-green-400 font-semibold uppercase tracking-wider text-xs">Requirements</h3>
+                <p className="text-gray-300 leading-relaxed">SportsDJ requires a <span className="text-white font-semibold">Spotify Premium</span> account and a <span className="text-white font-semibold">desktop browser</span> (Chrome, Firefox, Edge, or Safari on macOS). It does not work on phones or tablets.</p>
+              </section>
+
+              <section className="flex flex-col gap-2">
+                <h3 className="text-green-400 font-semibold uppercase tracking-wider text-xs">Events</h3>
+                <ul className="text-gray-300 leading-relaxed flex flex-col gap-1.5">
+                  <li><span className="text-white font-semibold">New</span> — create a blank event with 8 empty occasion buttons.</li>
+                  <li><span className="text-white font-semibold">Open</span> — switch between saved events.</li>
+                  <li><span className="text-white font-semibold">Export</span> — download the current event as a JSON file (backup or sharing).</li>
+                  <li><span className="text-white font-semibold">Import</span> — load a previously exported JSON file.</li>
+                </ul>
+              </section>
+
+              <section className="flex flex-col gap-2">
+                <h3 className="text-green-400 font-semibold uppercase tracking-wider text-xs">Importing songs from Spotify</h3>
+                <p className="text-gray-300 leading-relaxed">Spotify's API does not allow direct playlist import in development mode. Use <span className="text-white font-semibold">Exportify</span> instead:</p>
+                <ol className="text-gray-300 leading-relaxed flex flex-col gap-1.5 list-decimal list-inside">
+                  <li>Go to <span className="text-white font-mono text-xs bg-gray-700 px-1.5 py-0.5 rounded">exportify.net</span></li>
+                  <li>Log in with Spotify and click <span className="text-white font-semibold">Export</span> on your playlist</li>
+                  <li>Save the downloaded <span className="text-white font-semibold">.csv</span> file</li>
+                  <li>In SportsDJ → <span className="text-white font-semibold">Edit</span> → Songs → tap <span className="text-white font-semibold">+ CSV</span> and select the file</li>
+                </ol>
+              </section>
+
+              <section className="flex flex-col gap-2">
+                <h3 className="text-green-400 font-semibold uppercase tracking-wider text-xs">Occasion buttons</h3>
+                <ul className="text-gray-300 leading-relaxed flex flex-col gap-1.5">
+                  <li>Tap a button in Edit mode to set its <span className="text-white font-semibold">label</span>, <span className="text-white font-semibold">color</span>, and <span className="text-white font-semibold">Spotify URI</span>.</li>
+                  <li>Use <span className="text-white font-semibold">+ Row / − Row</span> to add or remove rows (1–5 rows of 4 buttons).</li>
+                  <li>Find a track URI in Spotify: right-click a song → Share → <span className="text-white font-semibold">Copy Song Link</span>, then paste it in the URI field.</li>
+                  <li>Set a <span className="text-white font-semibold">start offset</span> (seconds) to begin playback partway into a track.</li>
+                </ul>
+              </section>
+
+              <section className="flex flex-col gap-2">
+                <h3 className="text-green-400 font-semibold uppercase tracking-wider text-xs">Performance</h3>
+                <ul className="text-gray-300 leading-relaxed flex flex-col gap-1.5">
+                  <li>Tap any button or song row to start playback.</li>
+                  <li>Press <span className="text-white font-semibold">STOP</span> or hit <span className="text-white font-mono text-xs bg-gray-700 px-1.5 py-0.5 rounded">Space</span> to stop with a fade-out.</li>
+                  <li>The timer on the Stop button shows how long the current track has been playing (including any start offset).</li>
+                  <li>The number on the left of each song row counts how many times it has been played. Reset counters in Edit → Songs → <span className="text-white font-semibold">Reset</span>.</li>
+                  <li>Pressing <span className="text-white font-semibold">Edit</span> stops playback and opens the last played song for editing.</li>
+                </ul>
+              </section>
+
+            </div>
+            <div className="px-5 pb-5 pt-3 flex-shrink-0">
+              <button onClick={() => setShowHelp(false)} className="w-full py-2.5 rounded-xl bg-gray-700 text-white text-sm font-medium hover:bg-gray-600 transition-colors touch-manipulation">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAbout && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAbout(false)}>
@@ -292,16 +392,30 @@ function Header({
 
 export default function App() {
   const spotify = useSpotify()
-  const { events, activeEvent, setActiveEventId, updateEvent, addEvent, deleteEvent, exportEvent, importEvent } = useEvents(spotify.user?.id ?? null)
+  const { events, activeEvent, setActiveEventId, updateEvent, addEvent, addEventFromTemplate, deleteEvent, exportEvent, importEvent } = useEvents(spotify.user?.id ?? null)
 
   const [isEditing, setIsEditing] = useState(false)
+  const [editFocusSongId, setEditFocusSongId] = useState<string | undefined>(undefined)
   const [showNew, setShowNew] = useState(false)
   const [showOpen, setShowOpen] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
 
-  // OAuth callback spinner
+  // OAuth callback spinner — only show while we have a code and no error yet
   const isOAuthCallback = new URLSearchParams(window.location.search).has('code')
   if (isOAuthCallback && !spotify.token) {
+    if (spotify.error) {
+      return (
+        <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center gap-4 px-6">
+          <p className="text-red-400 text-sm text-center">{spotify.error}</p>
+          <button
+            onClick={() => window.location.replace('/')}
+            className="px-6 py-2 rounded-full bg-green-600 hover:bg-green-500 text-white text-sm font-semibold transition-colors"
+          >
+            Back to login
+          </button>
+        </div>
+      )
+    }
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
@@ -337,7 +451,7 @@ export default function App() {
           eventName={activeEvent?.name ?? 'No event'}
           userName={spotify.user.displayName}
           isEditing={isEditing}
-          onEdit={() => setIsEditing(true)}
+          onEdit={() => { setEditFocusSongId(undefined); setIsEditing(true) }}
           onDone={() => setIsEditing(false)}
           onNew={() => setShowNew(true)}
           onOpen={() => setShowOpen(true)}
@@ -357,12 +471,14 @@ export default function App() {
                 profile={activeEvent}
                 onUpdate={updateEvent}
                 onDone={() => setIsEditing(false)}
+                initialExpandedSongId={editFocusSongId}
               />
             ) : (
               <PerformanceView
                 profile={activeEvent}
                 spotify={spotify}
-                onEdit={() => setIsEditing(true)}
+                onEdit={(songId) => { setEditFocusSongId(songId); setIsEditing(true) }}
+                onUpdate={updateEvent}
               />
             )
           ) : (
@@ -377,6 +493,7 @@ export default function App() {
       {showNew && (
         <NewEventModal
           onConfirm={(name, sport) => { addEvent(name, sport); setShowNew(false) }}
+          onConfirmFromTemplate={tpl => { addEventFromTemplate(tpl); setShowNew(false); setIsEditing(false) }}
           onCancel={() => setShowNew(false)}
         />
       )}

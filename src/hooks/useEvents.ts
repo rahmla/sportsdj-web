@@ -15,6 +15,7 @@ export interface EventsHook {
   setActiveEventId: (id: string) => void
   updateEvent: (event: DJEvent) => void
   addEvent: (name: string, sport: string) => void
+  addEventFromTemplate: (template: DJEvent) => void
   deleteEvent: (id: string) => void
   exportEvent: (event: DJEvent) => void
   importEvent: (file: File) => Promise<void>
@@ -52,6 +53,17 @@ export function useEvents(userId: string | null): EventsHook {
 
   const addEvent = useCallback((name: string, sport: string) => {
     const newEvent: DJEvent = { ...createDefaultEvent(name), id: uuidv4(), name, sport }
+    const updated = [...events, newEvent]
+    setEvents(updated)
+    setActiveEventId(newEvent.id)
+  }, [events, setEvents, setActiveEventId])
+
+  const addEventFromTemplate = useCallback((template: DJEvent) => {
+    const newEvent: DJEvent = {
+      ...template,
+      id: uuidv4(),
+      songs: template.songs.map(s => ({ ...s, playCount: 0 })),
+    }
     const updated = [...events, newEvent]
     setEvents(updated)
     setActiveEventId(newEvent.id)
@@ -106,6 +118,7 @@ export function useEvents(userId: string | null): EventsHook {
     setActiveEventId,
     updateEvent,
     addEvent,
+    addEventFromTemplate,
     deleteEvent,
     exportEvent,
     importEvent,

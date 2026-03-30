@@ -5,6 +5,7 @@ interface Props {
   profile: DJEvent
   onUpdate: (event: DJEvent) => void
   onDone: () => void
+  initialExpandedSongId?: string
 }
 
 interface EditingButton {
@@ -25,6 +26,7 @@ interface EditingSong {
   uriType: 'spotifyTrack' | 'spotifyPlaylist'
   startOffset: string
   order: number
+  playCount: number
 }
 
 function toEditingButton(btn: OccasionButton): EditingButton {
@@ -48,6 +50,7 @@ function toEditingSong(song: SongItem): EditingSong {
     uriType: song.audioSource?.type ?? 'spotifyTrack',
     startOffset: String(song.startOffset ?? 0),
     order: song.order,
+    playCount: song.playCount ?? 0,
   }
 }
 
@@ -88,6 +91,7 @@ function fromEditingSong(es: EditingSong): SongItem {
     audioSource,
     startOffset: parseFloat(es.startOffset) || 0,
     order: es.order,
+    playCount: es.playCount,
   }
 }
 
@@ -110,7 +114,7 @@ function parseCsvRow(row: string): string[] {
   return fields
 }
 
-export function EditView({ profile, onUpdate, onDone }: Props) {
+export function EditView({ profile, onUpdate, onDone, initialExpandedSongId }: Props) {
   const [name, setName] = useState(profile.name)
   const [sport, setSport] = useState(profile.sport)
   const [buttons, setButtons] = useState<EditingButton[]>(
@@ -118,7 +122,7 @@ export function EditView({ profile, onUpdate, onDone }: Props) {
   )
   const [songs, setSongs] = useState<EditingSong[]>(profile.songs.map(toEditingSong))
   const [expandedButtonId, setExpandedButtonId] = useState<string | null>(null)
-  const [expandedSongId, setExpandedSongId] = useState<string | null>(null)
+  const [expandedSongId, setExpandedSongId] = useState<string | null>(initialExpandedSongId ?? null)
   const [importError, setImportError] = useState<string | null>(null)
   const csvFileRef = useRef<HTMLInputElement>(null)
 
@@ -154,6 +158,7 @@ export function EditView({ profile, onUpdate, onDone }: Props) {
             uriType: 'spotifyTrack',
             startOffset: '0',
             order: songs.length + newSongs.length,
+            playCount: 0,
           })
         }
 
@@ -196,6 +201,7 @@ export function EditView({ profile, onUpdate, onDone }: Props) {
       uriType: 'spotifyTrack',
       startOffset: '0',
       order: songs.length,
+      playCount: 0,
     }
     setSongs((prev) => [...prev, newSong])
     setExpandedSongId(newSong.id)

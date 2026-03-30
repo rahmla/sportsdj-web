@@ -1,15 +1,23 @@
 interface Props {
   onStop: () => void
   disabled: boolean
+  elapsed: number
 }
 
-export function StopButton({ onStop, disabled }: Props) {
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+export function StopButton({ onStop, disabled, elapsed }: Props) {
   return (
     <button
       onClick={onStop}
       disabled={disabled}
       className={[
-        'w-full py-4 rounded-xl font-black text-white text-xl tracking-widest',
+        'w-full py-3 rounded-xl font-black text-white text-xl tracking-widest',
+        'flex flex-col items-center justify-center gap-0.5',
         'transition-all duration-75 touch-manipulation select-none focus:outline-none',
         'focus:ring-2 focus:ring-red-400/50',
         disabled
@@ -19,6 +27,9 @@ export function StopButton({ onStop, disabled }: Props) {
       aria-label="Stop playback"
     >
       ■ STOP
+      <span className={`text-xs font-mono font-normal tracking-normal tabular-nums ${disabled ? 'text-gray-500' : 'text-red-200'}`}>
+        {disabled ? '00:00' : formatTime(elapsed)}
+      </span>
     </button>
   )
 }

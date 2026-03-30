@@ -32,7 +32,7 @@ export async function generateCodeChallenge(verifier: string): Promise<string> {
 
 export async function buildAuthURL(verifier: string): Promise<string> {
   const challenge = await generateCodeChallenge(verifier)
-  sessionStorage.setItem(CODE_VERIFIER_KEY, verifier)
+  localStorage.setItem(CODE_VERIFIER_KEY, verifier)
 
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -48,11 +48,12 @@ export async function buildAuthURL(verifier: string): Promise<string> {
 }
 
 export function getCodeVerifier(): string | null {
-  return sessionStorage.getItem(CODE_VERIFIER_KEY)
+  // Use localStorage — sessionStorage is cleared by Safari during cross-origin redirects (OAuth)
+  return localStorage.getItem(CODE_VERIFIER_KEY)
 }
 
 export function clearCodeVerifier(): void {
-  sessionStorage.removeItem(CODE_VERIFIER_KEY)
+  localStorage.removeItem(CODE_VERIFIER_KEY)
 }
 
 export async function exchangeCodeForToken(code: string, verifier: string): Promise<string> {

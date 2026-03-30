@@ -107,6 +107,19 @@ export function useSpotify(): SpotifyHook {
   // Load Spotify SDK script when token becomes available
   useEffect(() => {
     if (!token || sdkLoadedRef.current) return
+
+    // Spotify Web Playback SDK is not supported on iOS/Android browsers
+    const ua = navigator.userAgent
+    const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(ua)
+    if (isMobileBrowser) {
+      setError(
+        'The Spotify Web Playback SDK is not supported on mobile browsers. ' +
+        'Open sportsdj-web.vercel.app on a desktop/laptop browser instead, ' +
+        'then use your phone as the Spotify remote.'
+      )
+      return
+    }
+
     sdkLoadedRef.current = true
 
     window.onSpotifyWebPlaybackSDKReady = () => {

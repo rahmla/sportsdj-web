@@ -36,13 +36,10 @@ export function SongRow({ song, onPress, isPlaying }: Props) {
       ].join(' ')}
       aria-label={`Play ${song.title}`}
     >
-      {/* Playing indicator */}
-      <div
-        className={[
-          'flex-shrink-0 w-2 h-2 rounded-full',
-          isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-600',
-        ].join(' ')}
-      />
+      {/* Play count */}
+      <span className={`flex-shrink-0 w-7 text-center text-xs font-bold tabular-nums ${(song.playCount ?? 0) > 0 ? 'text-green-400' : 'text-gray-600'}`}>
+        {song.playCount ?? 0}
+      </span>
 
       <span className="flex-1 text-white font-semibold text-sm truncate min-w-0">
         {song.title}
