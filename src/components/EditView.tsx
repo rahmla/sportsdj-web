@@ -215,18 +215,33 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId }: P
   return (
     <div className="flex flex-col gap-4 p-3 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-white">Edit Event</h1>
+      <div className="flex items-center gap-3">
+        <div className="flex-1 flex flex-col gap-1 min-w-0">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="bg-gray-700 text-white rounded-lg px-3 py-2 text-base font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+            placeholder="Event name"
+          />
+          <input
+            type="text"
+            value={sport}
+            onChange={(e) => setSport(e.target.value)}
+            className="bg-gray-700 text-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+            placeholder="Sport"
+          />
+        </div>
         <button
           onClick={saveAll}
-          className="px-4 py-2 bg-green-600 hover:bg-green-500 active:bg-green-700 rounded-lg text-white font-semibold transition-colors touch-manipulation"
+          className="flex-shrink-0 px-4 py-2 bg-green-600 hover:bg-green-500 active:bg-green-700 rounded-lg text-white font-semibold transition-colors touch-manipulation"
         >
           Done
         </button>
       </div>
 
-      {/* Profile Section */}
-      <section className="bg-gray-800 rounded-xl p-4 flex flex-col gap-3">
+      {/* Profile Section — hidden, name/sport now in header */}
+      <section className="bg-gray-800 rounded-xl p-4 flex flex-col gap-3" style={{display:'none'}}>
         <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Event</h2>
         <div className="flex flex-col gap-2">
           <label className="text-xs text-gray-400">Name</label>
@@ -257,11 +272,11 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId }: P
             Occasion Buttons
           </h2>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">{buttons.length / 4} / 5 rows</span>
-            {buttons.length > 4 && (
+            <span className="text-xs text-gray-500">{buttons.length / 8} / 5 rows</span>
+            {buttons.length > 8 && (
               <button
                 onClick={() => {
-                  setButtons(prev => prev.slice(0, -4))
+                  setButtons(prev => prev.slice(0, -8))
                   setExpandedButtonId(null)
                 }}
                 className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-white font-semibold transition-colors touch-manipulation"
@@ -269,9 +284,9 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId }: P
                 − Row
               </button>
             )}
-            {buttons.length < 20 && (
+            {buttons.length < 40 && (
               <button
-                onClick={() => setButtons(prev => [...prev, ...Array.from({ length: 4 }, () => ({
+                onClick={() => setButtons(prev => [...prev, ...Array.from({ length: 8 }, () => ({
                   id: uuidv4(),
                   label: 'NON',
                   colorHex: '#666666',
