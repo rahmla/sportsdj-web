@@ -201,7 +201,6 @@ function OpenEventModal({
 
 function Header({
   eventName,
-  userName,
   hasActiveEvent,
   onNew,
   onOpen,
@@ -215,7 +214,6 @@ function Header({
   onSpotifyLogout,
 }: {
   eventName: string
-  userName: string
   hasActiveEvent: boolean
   onNew: () => void
   onOpen: () => void
@@ -455,7 +453,6 @@ export default function App() {
 
         <Header
           eventName={activeEvent?.name ?? 'SportsDJ'}
-          userName={spotify.user.displayName}
           hasActiveEvent={!!activeEvent}
           onNew={() => setShowNew(true)}
           onOpen={() => setShowOpen(true)}
