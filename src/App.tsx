@@ -151,15 +151,13 @@ function OpenEventModal({
                 <p className={`font-semibold text-sm ${ev.id === activeId ? 'text-green-400' : 'text-white'}`}>{ev.name}</p>
                 {ev.sport && <p className="text-gray-500 text-xs">{ev.sport}</p>}
               </button>
-              {events.length > 1 && (
-                <button
-                  onClick={() => setConfirmDelete(ev.id)}
-                  className="text-gray-600 hover:text-red-400 text-lg leading-none px-1 transition-colors"
-                  aria-label="Delete event"
-                >
-                  ×
-                </button>
-              )}
+              <button
+                onClick={() => setConfirmDelete(ev.id)}
+                className="text-gray-600 hover:text-red-400 text-lg leading-none px-1 transition-colors"
+                aria-label="Delete event"
+              >
+                ×
+              </button>
             </li>
           ))}
         </ul>
@@ -175,7 +173,7 @@ function OpenEventModal({
             <p className="text-white font-semibold mb-4">Delete "{events.find(e => e.id === confirmDelete)?.name}"?</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2.5 rounded-xl bg-gray-700 text-white text-sm font-medium hover:bg-gray-600 transition-colors">Cancel</button>
-              <button onClick={() => { onDelete(confirmDelete); setConfirmDelete(null) }} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-500 transition-colors">Delete</button>
+              <button onClick={() => { onDelete(confirmDelete); setConfirmDelete(null); if (events.length <= 1) onCancel() }} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-500 transition-colors">Delete</button>
             </div>
           </div>
         </div>

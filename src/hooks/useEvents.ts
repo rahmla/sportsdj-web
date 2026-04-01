@@ -77,14 +77,17 @@ export function useEvents(userId: string | null): EventsHook {
   }, [userId])
 
   const deleteEvent = useCallback((id: string) => {
-    if (events.length <= 1) return
     const updated = events.filter(e => e.id !== id)
     setEvents(updated)
-    if (activeEventId === id) {
+    if (activeEventId === id || updated.length === 0) {
       const next = updated[0]?.id ?? null
       if (next) setActiveEventId(next)
+      else {
+        setActiveEventIdState(CLOSED)
+        if (userId) saveActiveEventId(userId, CLOSED)
+      }
     }
-  }, [events, activeEventId, setEvents, setActiveEventId])
+  }, [events, activeEventId, userId, setEvents, setActiveEventId])
 
   const exportEvent = useCallback((event: DJEvent) => {
     const json = JSON.stringify(event, null, 2)
