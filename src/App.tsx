@@ -40,6 +40,8 @@ function SpotifyLogo() {
 
 // ─── New event modal ──────────────────────────────────────────────────────────
 
+const EMPTY_TEMPLATE_ID = '__empty__'
+
 function NewEventModal({
   onConfirm,
   onConfirmFromTemplate,
@@ -49,56 +51,69 @@ function NewEventModal({
   onConfirmFromTemplate: (template: DJEvent) => void
   onCancel: () => void
 }) {
+  const [templateId, setTemplateId] = useState(EMPTY_TEMPLATE_ID)
   const [name, setName] = useState('')
   const [sport, setSport] = useState('')
+
+  function handleTemplateChange(id: string) {
+    setTemplateId(id)
+    const tpl = BUILT_IN_TEMPLATES.find(t => t.id === id)
+    setName(tpl?.name ?? '')
+    setSport(tpl?.sport ?? '')
+  }
+
+  function handleCreate() {
+    if (!name.trim()) return
+    if (templateId === EMPTY_TEMPLATE_ID) {
+      onConfirm(name.trim(), sport.trim())
+    } else {
+      const tpl = BUILT_IN_TEMPLATES.find(t => t.id === templateId)
+      if (tpl) onConfirmFromTemplate({ ...tpl, name: name.trim(), sport: sport.trim() })
+    }
+    onCancel()
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onCancel}>
       <div className="bg-gray-800 rounded-2xl mx-4 w-full max-w-xs shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="px-5 pt-5 pb-4">
-          <h3 className="text-white font-bold text-lg mb-4">New Event</h3>
+        <div className="px-5 pt-5 pb-4 flex flex-col gap-3">
+          <h3 className="text-white font-bold text-lg">New Event</h3>
 
-          {/* Templates */}
-          {BUILT_IN_TEMPLATES.length > 0 && (
-            <>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">From template</p>
-              <div className="flex flex-col gap-2 mb-4">
-                {BUILT_IN_TEMPLATES.map(tpl => (
-                  <button
-                    key={tpl.id}
-                    onClick={() => { onConfirmFromTemplate(tpl); onCancel() }}
-                    className="w-full text-left px-3 py-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500 transition-colors touch-manipulation"
-                  >
-                    <p className="text-blue-300 font-semibold text-sm">{tpl.name}</p>
-                    {tpl.sport && <p className="text-gray-500 text-xs">{tpl.sport}</p>}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px bg-gray-700" />
-                <span className="text-xs text-gray-600">or start blank</span>
-                <div className="flex-1 h-px bg-gray-700" />
-              </div>
-            </>
-          )}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-gray-400">Template</label>
+            <select
+              value={templateId}
+              onChange={e => handleTemplateChange(e.target.value)}
+              className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value={EMPTY_TEMPLATE_ID}>Empty</option>
+              {BUILT_IN_TEMPLATES.map(tpl => (
+                <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+              ))}
+            </select>
+          </div>
 
-          {/* Blank event form */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-gray-400">Event name</label>
             <input
               type="text"
-              placeholder="Event name (e.g. Volleyboll SM)"
+              placeholder="e.g. Volleyboll SM"
               value={name}
               onChange={e => setName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && name.trim() && onConfirm(name.trim(), sport.trim())}
+              onKeyDown={e => e.key === 'Enter' && handleCreate()}
               className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500"
               autoFocus
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-gray-400">Sport</label>
             <input
               type="text"
-              placeholder="Sport (e.g. Volleyball)"
+              placeholder="e.g. Volleyball"
               value={sport}
               onChange={e => setSport(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && name.trim() && onConfirm(name.trim(), sport.trim())}
+              onKeyDown={e => e.key === 'Enter' && handleCreate()}
               className="bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500"
             />
           </div>
@@ -106,7 +121,7 @@ function NewEventModal({
         <div className="flex gap-3 px-5 pb-5">
           <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl bg-gray-700 text-white font-medium text-sm hover:bg-gray-600 transition-colors touch-manipulation">Cancel</button>
           <button
-            onClick={() => name.trim() && onConfirm(name.trim(), sport.trim())}
+            onClick={handleCreate}
             disabled={!name.trim()}
             className="flex-1 py-2.5 rounded-xl bg-green-600 disabled:opacity-40 text-white font-semibold text-sm hover:bg-green-500 transition-colors touch-manipulation"
           >
