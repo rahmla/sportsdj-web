@@ -13,6 +13,7 @@ export interface EventsHook {
   events: DJEvent[]
   activeEvent: DJEvent | null
   setActiveEventId: (id: string) => void
+  closeEvent: () => void
   updateEvent: (event: DJEvent) => void
   addEvent: (name: string, sport: string) => void
   addEventFromTemplate: (template: DJEvent) => void
@@ -35,7 +36,8 @@ export function useEvents(userId: string | null): EventsHook {
     setActiveEventIdState(activeId)
   }, [userId])
 
-  const activeEvent = events.find(e => e.id === activeEventId) ?? events[0] ?? null
+  const CLOSED = '__closed__'
+  const activeEvent = activeEventId === CLOSED ? null : (events.find(e => e.id === activeEventId) ?? events[0] ?? null)
 
   const setEvents = useCallback((updated: DJEvent[]) => {
     setEventsState(updated)
@@ -68,6 +70,11 @@ export function useEvents(userId: string | null): EventsHook {
     setEvents(updated)
     setActiveEventId(newEvent.id)
   }, [events, setEvents, setActiveEventId])
+
+  const closeEvent = useCallback(() => {
+    setActiveEventIdState('__closed__')
+    if (userId) saveActiveEventId(userId, '__closed__')
+  }, [userId])
 
   const deleteEvent = useCallback((id: string) => {
     if (events.length <= 1) return
@@ -116,6 +123,7 @@ export function useEvents(userId: string | null): EventsHook {
     events,
     activeEvent,
     setActiveEventId,
+    closeEvent,
     updateEvent,
     addEvent,
     addEventFromTemplate,

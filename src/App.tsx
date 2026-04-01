@@ -189,11 +189,10 @@ function OpenEventModal({
 function Header({
   eventName,
   userName,
-  isEditing,
-  onEdit,
-  onDone,
+  hasActiveEvent,
   onNew,
   onOpen,
+  onClose,
   onExport,
   onImport,
   importError,
@@ -204,11 +203,10 @@ function Header({
 }: {
   eventName: string
   userName: string
-  isEditing: boolean
-  onEdit: () => void
-  onDone: () => void
+  hasActiveEvent: boolean
   onNew: () => void
   onOpen: () => void
+  onClose: () => void
   onExport: () => void
   onImport: (file: File) => void
   importError: string | null
@@ -250,22 +248,17 @@ function Header({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full z-50 w-52 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl overflow-hidden mt-1 mr-1">
-            {isEditing ? (
-              <button className={menuItem} onClick={() => { onDone(); setOpen(false) }}>
-                <span className="text-green-400">✓</span> Done editing
-              </button>
-            ) : (
-              <button className={menuItem} onClick={() => { onEdit(); setOpen(false) }}>
-                <span>✏️</span> Edit event
-              </button>
-            )}
-            <div className="border-t border-gray-700" />
             <button className={menuItem} onClick={() => { onNew(); setOpen(false) }}>
               <span>＋</span> New event
             </button>
             <button className={menuItem} onClick={() => { onOpen(); setOpen(false) }}>
               <span>📂</span> Open event
             </button>
+            {hasActiveEvent && (
+              <button className={menuItem} onClick={() => { onClose(); setOpen(false) }}>
+                <span>✕</span> Close event
+              </button>
+            )}
             <div className="border-t border-gray-700" />
             <button className={menuItem} onClick={() => { onExport(); setOpen(false) }}>
               <span>⬇️</span> Export
@@ -392,7 +385,7 @@ function Header({
 
 export default function App() {
   const spotify = useSpotify()
-  const { events, activeEvent, setActiveEventId, updateEvent, addEvent, addEventFromTemplate, deleteEvent, exportEvent, importEvent } = useEvents(spotify.user?.id ?? null)
+  const { events, activeEvent, setActiveEventId, closeEvent, updateEvent, addEvent, addEventFromTemplate, deleteEvent, exportEvent, importEvent } = useEvents(spotify.user?.id ?? null)
 
   const [isEditing, setIsEditing] = useState(false)
   const [editFocusSongId, setEditFocusSongId] = useState<string | undefined>(undefined)
@@ -445,16 +438,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <div className="mx-auto w-full max-w-[480px] min-h-screen flex flex-col bg-gray-900 shadow-2xl">
+      <div className="mx-auto w-full max-w-5xl min-h-screen flex flex-col bg-gray-900 shadow-2xl">
 
         <Header
-          eventName={activeEvent?.name ?? 'No event'}
+          eventName={activeEvent?.name ?? 'SportsDJ'}
           userName={spotify.user.displayName}
-          isEditing={isEditing}
-          onEdit={() => { setEditFocusSongId(undefined); setIsEditing(true) }}
-          onDone={() => setIsEditing(false)}
+          hasActiveEvent={!!activeEvent}
           onNew={() => setShowNew(true)}
           onOpen={() => setShowOpen(true)}
+          onClose={() => { closeEvent(); setIsEditing(false) }}
           onExport={() => activeEvent && exportEvent(activeEvent)}
           onImport={handleImport}
           importError={importError}
@@ -482,9 +474,27 @@ export default function App() {
               />
             )
           ) : (
-            <div className="flex flex-col items-center justify-center h-48 gap-3">
-              <p className="text-gray-500 text-sm">No events yet.</p>
-              <button onClick={() => setShowNew(true)} className="px-4 py-2 rounded-full bg-green-600 hover:bg-green-500 text-white text-sm font-semibold transition-colors touch-manipulation">Create first event</button>
+            <div className="flex flex-col items-center justify-center gap-6 px-6 py-20">
+              <div className="text-center flex flex-col gap-2">
+                <p className="text-white font-semibold text-lg">No active event</p>
+                <p className="text-gray-500 text-sm">Select New event or Open event to get started</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowNew(true)}
+                  className="px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 active:bg-green-700 text-white text-sm font-semibold transition-colors touch-manipulation"
+                >
+                  ＋ New event
+                </button>
+                {events.length > 0 && (
+                  <button
+                    onClick={() => setShowOpen(true)}
+                    className="px-5 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white text-sm font-semibold transition-colors touch-manipulation"
+                  >
+                    📂 Open event
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
