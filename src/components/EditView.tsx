@@ -142,10 +142,10 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId }: P
           const trackName = trackNameIdx !== -1 ? cols[trackNameIdx]?.trim() ?? '' : ''
           const artist = (artistIdx !== -1 ? cols[artistIdx]?.trim() ?? '' : '').replace(/;/g, ', ')
           const title = trackName && artist ? `${trackName} – ${artist}` : trackName || uri
-          newSongs.push({ id: uuidv4(), title, uriInput: uri, uriName: trackName, uriType: 'spotifyTrack', startOffset: '0', order: songs.length + newSongs.length, playCount: 0 })
+          newSongs.push({ id: uuidv4(), title, uriInput: uri, uriName: trackName, uriType: 'spotifyTrack', startOffset: '0', order: newSongs.length, playCount: 0 })
         }
         if (newSongs.length === 0) throw new Error('No tracks found in CSV')
-        setSongs(prev => [...prev, ...newSongs])
+        setSongs(prev => [...prev, ...newSongs.map((s, i) => ({ ...s, order: prev.length + i }))])
       } catch (err) {
         setImportError(err instanceof Error ? err.message : 'CSV import failed')
       }
