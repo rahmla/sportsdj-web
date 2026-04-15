@@ -16,8 +16,8 @@ export function StopButton({ onStop, disabled, elapsed }: Props) {
       onClick={onStop}
       disabled={disabled}
       className={[
-        'w-full py-3 rounded-xl font-black text-white text-xl tracking-widest',
-        'flex flex-col items-center justify-center gap-0.5',
+        'w-full py-2.5 rounded-2xl font-black text-white text-2xl tracking-widest',
+        'flex items-center justify-center gap-4',
         'transition-all duration-75 touch-manipulation select-none focus:outline-none',
         'focus:ring-2 focus:ring-red-400/50',
         disabled
@@ -27,7 +27,7 @@ export function StopButton({ onStop, disabled, elapsed }: Props) {
       aria-label="Stop playback"
     >
       ■ STOP
-      <span className={`text-xs font-mono font-normal tracking-normal tabular-nums ${disabled ? 'text-gray-500' : 'text-red-200'}`}>
+      <span className={`text-base font-mono font-normal tracking-normal tabular-nums ${disabled ? 'text-gray-500' : 'text-red-200'}`}>
         {disabled ? '00:00' : formatTime(elapsed)}
       </span>
     </button>

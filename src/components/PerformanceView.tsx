@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import type { DJEvent, AudioSource } from '../types'
+import { sourceId } from '../types'
 import type { SpotifyHook } from '../hooks/useSpotify'
 import { OccasionButton } from './OccasionButton'
 import { SongRow } from './SongRow'
 import { StopButton } from './StopButton'
+import { getMp3 } from '../utils/mp3Storage'
 
 interface Props {
   profile: DJEvent
@@ -12,11 +14,22 @@ interface Props {
   onUpdate: (event: DJEvent) => void
 }
 
+const CROSSFADE_MS = 4000
+const MAX_VOL = 0.8
+
 export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
-  const [playingSourceUri, setPlayingSourceUri] = useState<string | null>(null)
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  const [mp3Playing, setMp3Playing] = useState(false)
   const [lastPlayedSongId, setLastPlayedSongId] = useState<string | undefined>(undefined)
   const [elapsed, setElapsed] = useState(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const manualStopRef = useRef(false)
+  const crossfadeStartedRef = useRef(false)
+  const playingIdRef = useRef<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const blobUrlRef = useRef<string | null>(null)
+
+  const isAnyPlaying = spotify.isPlaying || mp3Playing
 
   function startTimer(offsetSeconds = 0) {
     if (intervalRef.current) clearInterval(intervalRef.current)
@@ -25,152 +38,201 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
   }
 
   function stopTimer() {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
     setElapsed(0)
   }
 
-  useEffect(() => {
-    if (!spotify.isPlaying) stopTimer()
-  }, [spotify.isPlaying])
+  function revokeBlobUrl() {
+    if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null }
+  }
 
-  useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current) }, [])
+  useEffect(() => { playingIdRef.current = playingId }, [playingId])
+  useEffect(() => { if (!spotify.isPlaying && !mp3Playing) stopTimer() }, [spotify.isPlaying, mp3Playing])
+  useEffect(() => () => {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    revokeBlobUrl()
+  }, [])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.code === 'Space' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
         e.preventDefault()
-        if (spotify.isPlaying) handleStop()
+        if (isAnyPlaying) handleStop()
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isAnyPlaying])
+
+  // Crossfade for Spotify
+  useEffect(() => {
+    if (!spotify.isPlaying || !spotify.duration) return
+    const remaining = spotify.duration - spotify.position
+    if (remaining > 0 && remaining <= CROSSFADE_MS && !crossfadeStartedRef.current) {
+      crossfadeStartedRef.current = true
+      const steps = 30
+      const stepMs = remaining / steps
+      let step = steps
+      const fade = setInterval(async () => {
+        step--
+        await spotify.setVolume((step / steps) * MAX_VOL)
+        if (step <= 0) clearInterval(fade)
+      }, stepMs)
+    }
+  }, [spotify.position])
+
+  // Auto-play next song when Spotify track ends
+  useEffect(() => {
+    if (spotify.isPlaying || manualStopRef.current || !playingIdRef.current) return
+    const sorted = profile.songs.slice().sort((a, b) => a.order - b.order)
+    const currentIdx = sorted.findIndex(s => s.audioSource && sourceId(s.audioSource) === playingIdRef.current)
+    const next = currentIdx >= 0 ? sorted[currentIdx + 1] : null
+    if (next?.audioSource && next.audioSource.type !== 'mp3') {
+      handlePlayWithFadeIn(next.audioSource, next.startOffset, next.id)
+    } else if (!mp3Playing) {
+      setPlayingId(null)
+    }
   }, [spotify.isPlaying])
 
-  async function handlePlay(source: AudioSource, offset: number, songId?: string) {
-    if (!source) return
-    setPlayingSourceUri(source.uri)
+  async function stopMp3() {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.onended = null
+      audioRef.current = null
+    }
+    revokeBlobUrl()
+    setMp3Playing(false)
+  }
+
+  async function playMp3(source: AudioSource, offset: number, songId?: string) {
+    if (!source.fileKey) return
+    const blob = await getMp3(source.fileKey)
+    if (!blob) { console.warn('[MP3] File not found in IndexedDB:', source.fileKey); return }
+
+    await stopMp3()
+    const url = URL.createObjectURL(blob)
+    blobUrlRef.current = url
+    const audio = new Audio(url)
+    audioRef.current = audio
+    if (offset > 0) audio.currentTime = offset
+    audio.onended = () => {
+      setMp3Playing(false)
+      setPlayingId(null)
+      stopTimer()
+      revokeBlobUrl()
+    }
+    await audio.play()
+    setMp3Playing(true)
+    setPlayingId(source.fileKey!)
     startTimer(offset)
+
+    if (songId) {
+      setLastPlayedSongId(songId)
+      onUpdate({ ...profile, songs: profile.songs.map(s => s.id === songId ? { ...s, playCount: (s.playCount ?? 0) + 1 } : s) })
+    }
+  }
+
+  async function handlePlayWithFadeIn(source: AudioSource, offset: number, songId?: string) {
+    if (source.type === 'mp3') { await playMp3(source, offset, songId); return }
+    await spotify.setVolume(0)
+    setPlayingId(source.uri)
+    crossfadeStartedRef.current = false
+    manualStopRef.current = false
+    startTimer(offset)
+    await spotify.playUri(source.uri, offset)
+    const steps = 20
+    const stepMs = 2000 / steps
+    for (let i = 1; i <= steps; i++) {
+      await new Promise(r => setTimeout(r, stepMs))
+      await spotify.setVolume((i / steps) * MAX_VOL)
+    }
+    if (songId) {
+      setLastPlayedSongId(songId)
+      onUpdate({ ...profile, songs: profile.songs.map(s => s.id === songId ? { ...s, playCount: (s.playCount ?? 0) + 1 } : s) })
+    }
+  }
+
+  async function handlePlay(source: AudioSource, offset: number, songId?: string) {
+    if (source.type === 'mp3') { await playMp3(source, offset, songId); return }
+    manualStopRef.current = false
+    crossfadeStartedRef.current = false
+    setPlayingId(source.uri)
+    startTimer(offset)
+    await spotify.setVolume(MAX_VOL)
     await spotify.playUri(source.uri, offset)
     if (songId) {
       setLastPlayedSongId(songId)
-      onUpdate({
-        ...profile,
-        songs: profile.songs.map(s =>
-          s.id === songId ? { ...s, playCount: (s.playCount ?? 0) + 1 } : s
-        ),
-      })
+      onUpdate({ ...profile, songs: profile.songs.map(s => s.id === songId ? { ...s, playCount: (s.playCount ?? 0) + 1 } : s) })
     }
   }
 
   async function handleStop() {
-    setPlayingSourceUri(null)
+    manualStopRef.current = true
+    crossfadeStartedRef.current = false
+    setPlayingId(null)
     stopTimer()
+    await stopMp3()
     await spotify.stop()
+    await spotify.setVolume(MAX_VOL)
   }
 
-  // Sync playing state: if spotify stopped externally, clear highlight
-  const effectivelyPlaying = spotify.isPlaying ? playingSourceUri : null
+  const effectivelyPlayingId = isAnyPlaying ? playingId : null
 
   return (
-    <div className="flex flex-col gap-3 p-3 pb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between py-1">
-        {/* Spotify status */}
+    <div className="flex flex-col gap-4 p-6 pb-8">
+      {/* Status row */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div
-            className={[
-              'w-2.5 h-2.5 rounded-full flex-shrink-0',
-              spotify.isReady ? 'bg-green-400' : 'bg-red-500',
-            ].join(' ')}
-          />
-          <span className="text-xs text-gray-400">
+          <div className={['w-2.5 h-2.5 rounded-full flex-shrink-0', spotify.isReady ? 'bg-green-400' : 'bg-red-500'].join(' ')} />
+          <span className="text-sm text-gray-400">
             {spotify.isReady ? 'Spotify ready' : spotify.token ? 'Connecting…' : 'Not connected'}
           </span>
         </div>
-
-        {/* Profile name + Edit */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="text-sm font-semibold text-white leading-tight">{profile.name}</div>
-            <div className="text-xs text-gray-400 leading-tight">{profile.sport}</div>
+            <div className="text-base font-bold text-white leading-tight">{profile.name}</div>
+            <div className="text-sm text-gray-400 leading-tight">{profile.sport}</div>
           </div>
-          <button
-            onClick={async () => { await handleStop(); onEdit(lastPlayedSongId) }}
-            className="ml-1 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white text-sm font-medium transition-colors touch-manipulation"
-          >
-            Edit
-          </button>
+          <button onClick={async () => { await handleStop(); onEdit(lastPlayedSongId) }}
+            className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white text-sm font-medium transition-colors">Edit</button>
         </div>
       </div>
 
-      {/* Error banner */}
       {spotify.error && (
-        <div className="bg-red-900/60 border border-red-700 rounded-lg px-3 py-2 text-red-200 text-xs">
-          {spotify.error}
-        </div>
+        <div className="bg-red-900/60 border border-red-700 rounded-lg px-4 py-2 text-red-200 text-sm">{spotify.error}</div>
       )}
 
-      {/* Occasion Buttons Grid: 4 columns, 2 rows */}
-      <div className="grid grid-cols-4 gap-2" style={{ gridAutoRows: '1fr' }}>
-        {profile.occasionButtons.map((btn) => (
+      {/* Occasion buttons */}
+      <div className="grid grid-cols-8 gap-3" style={{ gridAutoRows: '1fr' }}>
+        {profile.occasionButtons.map(btn => (
           <OccasionButton
             key={btn.id}
             button={btn}
-            onPress={() => {
-              if (btn.audioSource) {
-                handlePlay(btn.audioSource, btn.startOffset)
-              }
-            }}
-            isPlaying={
-              effectivelyPlaying !== null &&
-              !!btn.audioSource &&
-              effectivelyPlaying === btn.audioSource.uri
-            }
+            onPress={() => { if (btn.audioSource) handlePlay(btn.audioSource, btn.startOffset) }}
+            isPlaying={effectivelyPlayingId !== null && !!btn.audioSource && effectivelyPlayingId === sourceId(btn.audioSource)}
           />
         ))}
       </div>
 
-      {/* Stop Button */}
-      <StopButton onStop={handleStop} disabled={!spotify.isPlaying} elapsed={elapsed} />
+      <StopButton onStop={handleStop} disabled={!isAnyPlaying} elapsed={elapsed} />
 
-      {/* Songs Section */}
+      {/* Songs */}
       {profile.songs.length > 0 && (
-        <div className="flex flex-col min-h-0">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
-            Songs
-          </h2>
-          <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[50vh] pr-0.5">
-            {profile.songs
-              .slice()
-              .sort((a, b) => a.order - b.order)
-              .map((song) => (
-                <SongRow
-                  key={song.id}
-                  song={song}
-                  onPress={() => {
-                    if (song.audioSource) {
-                      handlePlay(song.audioSource, song.startOffset, song.id)
-                    }
-                  }}
-                  isPlaying={
-                    effectivelyPlaying !== null &&
-                    !!song.audioSource &&
-                    effectivelyPlaying === song.audioSource.uri
-                  }
-                />
-              ))}
+        <div className="flex flex-col gap-2">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">Songs</h2>
+          <div className="flex flex-col gap-1.5">
+            {profile.songs.slice().sort((a, b) => a.order - b.order).map(song => (
+              <SongRow
+                key={song.id}
+                song={song}
+                onPress={() => { if (song.audioSource) handlePlay(song.audioSource, song.startOffset, song.id) }}
+                isPlaying={effectivelyPlayingId !== null && !!song.audioSource && effectivelyPlayingId === sourceId(song.audioSource)}
+              />
+            ))}
           </div>
           {profile.songs.some(s => (s.playCount ?? 0) > 0) && (
-            <button
-              onClick={() => onUpdate({
-                ...profile,
-                songs: profile.songs.map(s => ({ ...s, playCount: 0 })),
-              })}
-              className="mt-2 w-full py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs font-semibold transition-colors touch-manipulation"
-            >
+            <button onClick={() => onUpdate({ ...profile, songs: profile.songs.map(s => ({ ...s, playCount: 0 })) })}
+              className="mt-1 w-full py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs font-semibold transition-colors">
               Reset play counters
             </button>
           )}

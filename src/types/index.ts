@@ -1,7 +1,14 @@
 export interface AudioSource {
-  type: 'spotifyTrack' | 'spotifyPlaylist'
-  uri: string
-  name: string
+  type: 'spotifyTrack' | 'spotifyPlaylist' | 'mp3'
+  uri: string        // spotify URI; empty string for mp3
+  name: string       // display name
+  fileKey?: string   // IndexedDB key (mp3 only)
+  fileName?: string  // original filename for display (mp3 only)
+}
+
+/** Returns a stable identifier for tracking which source is playing */
+export function sourceId(source: AudioSource): string {
+  return source.type === 'mp3' ? (source.fileKey ?? '') : source.uri
 }
 
 export interface OccasionButton {

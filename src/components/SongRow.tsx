@@ -27,8 +27,8 @@ export function SongRow({ song, onPress, isPlaying }: Props) {
       onClick={onPress}
       disabled={!hasSource}
       className={[
-        'flex items-center gap-3 w-full px-4 py-3 rounded-lg text-left transition-colors duration-100',
-        'min-h-[52px] touch-manipulation select-none focus:outline-none',
+        'flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-left transition-colors duration-100',
+        'min-h-[56px] touch-manipulation select-none focus:outline-none',
         isPlaying
           ? 'bg-green-700/60 ring-1 ring-green-400'
           : 'bg-gray-800 hover:bg-gray-700 active:bg-gray-600',
@@ -41,7 +41,7 @@ export function SongRow({ song, onPress, isPlaying }: Props) {
         {song.playCount ?? 0}
       </span>
 
-      <span className="flex-1 text-white font-semibold text-sm truncate min-w-0">
+      <span className="flex-1 text-white font-semibold text-base truncate min-w-0">
         {song.title}
       </span>
 

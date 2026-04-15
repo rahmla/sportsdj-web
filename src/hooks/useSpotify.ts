@@ -21,12 +21,15 @@ export interface SpotifyHook {
   deviceId: string | null
   isReady: boolean
   isPlaying: boolean
+  position: number
+  duration: number
   error: string | null
   login: () => Promise<void>
   logout: () => void
   playUri: (uri: string, startOffset?: number) => Promise<void>
   pause: () => Promise<void>
   stop: () => Promise<void>
+  setVolume: (vol: number) => Promise<void>
 }
 
 export function useSpotify(): SpotifyHook {
@@ -35,6 +38,8 @@ export function useSpotify(): SpotifyHook {
   const [deviceId, setDeviceId] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [position, setPosition] = useState(0)
+  const [duration, setDuration] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   const playerRef = useRef<Spotify.Player | null>(null)
@@ -165,8 +170,12 @@ export function useSpotify(): SpotifyHook {
     player.addListener('player_state_changed', (state) => {
       if (state) {
         setIsPlaying(!state.paused)
+        setPosition(state.position)
+        setDuration(state.duration)
       } else {
         setIsPlaying(false)
+        setPosition(0)
+        setDuration(0)
       }
     })
 
@@ -278,17 +287,24 @@ export function useSpotify(): SpotifyHook {
     await player.setVolume(0.8)
   }, [pause])
 
+  const setVolume = useCallback(async (vol: number) => {
+    await playerRef.current?.setVolume(Math.max(0, Math.min(1, vol)))
+  }, [])
+
   return {
     token,
     user,
     deviceId,
     isReady,
     isPlaying,
+    position,
+    duration,
     error,
     login,
     logout,
     playUri,
     pause,
     stop,
+    setVolume,
   }
 }
