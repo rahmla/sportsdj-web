@@ -27,9 +27,28 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
   const crossfadeStartedRef = useRef(false)
   const playingIdRef = useRef<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const blobUrlRef = useRef<string | null>(null)
+  // Pre-loaded blob URLs keyed by fileKey — avoids async IndexedDB call during playback
+  const mp3UrlsRef = useRef<Map<string, string>>(new Map())
 
   const isAnyPlaying = spotify.isPlaying || mp3Playing
+
+  // Pre-load all MP3 blob URLs when profile loads
+  useEffect(() => {
+    const sources = profile.occasionButtons
+      .map(b => b.audioSource)
+      .filter((s): s is AudioSource => s?.type === 'mp3' && !!s.fileKey)
+
+    sources.forEach(async source => {
+      if (!source.fileKey || mp3UrlsRef.current.has(source.fileKey)) return
+      const blob = await getMp3(source.fileKey)
+      if (blob) mp3UrlsRef.current.set(source.fileKey, URL.createObjectURL(blob))
+    })
+
+    return () => {
+      mp3UrlsRef.current.forEach(url => URL.revokeObjectURL(url))
+      mp3UrlsRef.current.clear()
+    }
+  }, [profile.id])
 
   function startTimer(offsetSeconds = 0) {
     if (intervalRef.current) clearInterval(intervalRef.current)
@@ -42,16 +61,9 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
     setElapsed(0)
   }
 
-  function revokeBlobUrl() {
-    if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null }
-  }
-
   useEffect(() => { playingIdRef.current = playingId }, [playingId])
   useEffect(() => { if (!spotify.isPlaying && !mp3Playing) stopTimer() }, [spotify.isPlaying, mp3Playing])
-  useEffect(() => () => {
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    revokeBlobUrl()
-  }, [])
+  useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current) }, [])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -81,7 +93,7 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
     }
   }, [spotify.position])
 
-  // Auto-play next song when Spotify track ends
+  // Auto-play next Spotify song when track ends
   useEffect(() => {
     if (spotify.isPlaying || manualStopRef.current || !playingIdRef.current) return
     const sorted = profile.songs.slice().sort((a, b) => a.order - b.order)
@@ -94,24 +106,30 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
     }
   }, [spotify.isPlaying])
 
-  async function stopMp3() {
+  function stopMp3() {
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current.onended = null
       audioRef.current = null
     }
-    revokeBlobUrl()
     setMp3Playing(false)
   }
 
-  async function playMp3(source: AudioSource, offset: number, songId?: string) {
+  function playMp3(source: AudioSource, offset: number, songId?: string) {
     if (!source.fileKey) return
-    const blob = await getMp3(source.fileKey)
-    if (!blob) { console.warn('[MP3] File not found in IndexedDB:', source.fileKey); return }
+    const url = mp3UrlsRef.current.get(source.fileKey)
+    if (!url) {
+      // Not pre-loaded yet — load now (may fail autoplay on first try in some browsers)
+      getMp3(source.fileKey).then(blob => {
+        if (!blob) return
+        const blobUrl = URL.createObjectURL(blob)
+        mp3UrlsRef.current.set(source.fileKey!, blobUrl)
+        playMp3(source, offset, songId)
+      })
+      return
+    }
 
-    await stopMp3()
-    const url = URL.createObjectURL(blob)
-    blobUrlRef.current = url
+    stopMp3()
     const audio = new Audio(url)
     audioRef.current = audio
     if (offset > 0) audio.currentTime = offset
@@ -119,11 +137,10 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
       setMp3Playing(false)
       setPlayingId(null)
       stopTimer()
-      revokeBlobUrl()
     }
-    await audio.play()
+    audio.play().catch(err => console.error('[MP3] play() failed:', err))
     setMp3Playing(true)
-    setPlayingId(source.fileKey!)
+    setPlayingId(source.fileKey)
     startTimer(offset)
 
     if (songId) {
@@ -133,7 +150,7 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
   }
 
   async function handlePlayWithFadeIn(source: AudioSource, offset: number, songId?: string) {
-    if (source.type === 'mp3') { await playMp3(source, offset, songId); return }
+    if (source.type === 'mp3') { playMp3(source, offset, songId); return }
     await spotify.setVolume(0)
     setPlayingId(source.uri)
     crossfadeStartedRef.current = false
@@ -153,7 +170,7 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
   }
 
   async function handlePlay(source: AudioSource, offset: number, songId?: string) {
-    if (source.type === 'mp3') { await playMp3(source, offset, songId); return }
+    if (source.type === 'mp3') { playMp3(source, offset, songId); return }
     manualStopRef.current = false
     crossfadeStartedRef.current = false
     setPlayingId(source.uri)
@@ -171,7 +188,7 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
     crossfadeStartedRef.current = false
     setPlayingId(null)
     stopTimer()
-    await stopMp3()
+    stopMp3()
     await spotify.stop()
     await spotify.setVolume(MAX_VOL)
   }
