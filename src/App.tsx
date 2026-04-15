@@ -448,8 +448,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <div className="mx-auto w-full max-w-5xl min-h-screen flex flex-col bg-gray-900 shadow-2xl">
+    <div className="h-screen bg-gray-900 overflow-hidden">
+      <div className="mx-auto w-full max-w-5xl h-full flex flex-col bg-gray-900 shadow-2xl">
 
         <Header
           eventName={activeEvent?.name ?? 'SportsDJ'}
@@ -466,7 +466,7 @@ export default function App() {
           onSpotifyLogout={spotify.logout}
         />
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {activeEvent ? (
             isEditing ? (
               <EditView
