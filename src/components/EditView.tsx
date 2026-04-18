@@ -3,12 +3,21 @@ import { v4 as uuidv4 } from 'uuid'
 import type { DJEvent, OccasionButton, SongItem, AudioSource } from '../types'
 import { saveMp3, deleteMp3 } from '../utils/mp3Storage'
 
+interface SpotifyPreview {
+  isReady: boolean
+  isPlaying: boolean
+  position: number
+  playUri: (uri: string, offset?: number) => Promise<void>
+  stop: () => Promise<void>
+}
+
 interface Props {
   profile: DJEvent
   onUpdate: (event: DJEvent) => void
   onDone: () => void
   initialExpandedSongId?: string
   spotifyToken?: string | null
+  spotify?: SpotifyPreview
 }
 
 interface EditingButton {
@@ -113,7 +122,7 @@ function parseCsvRow(row: string): string[] {
   return fields
 }
 
-export function EditView({ profile, onUpdate, onDone, initialExpandedSongId, spotifyToken }: Props) {
+export function EditView({ profile, onUpdate, onDone, initialExpandedSongId, spotifyToken, spotify }: Props) {
   const [name, setName] = useState(profile.name)
   const [sport, setSport] = useState(profile.sport)
   const [buttons, setButtons] = useState<EditingButton[]>(profile.occasionButtons.map(toEditingButton))
@@ -122,6 +131,7 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId, spo
   const [expandedSongId, setExpandedSongId] = useState<string | null>(initialExpandedSongId ?? null)
   const [importError, setImportError] = useState<string | null>(null)
   const [fetchingTitleId, setFetchingTitleId] = useState<string | null>(null)
+  const [playingSongId, setPlayingSongId] = useState<string | null>(null)
   const csvFileRef = useRef<HTMLInputElement>(null)
   const mp3FileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -177,6 +187,19 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId, spo
 
   function updateSong(id: string, patch: Partial<EditingSong>) {
     setSongs(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
+  }
+
+  async function handlePreview(song: EditingSong) {
+    if (!spotify) return
+    if (playingSongId === song.id && spotify.isPlaying) {
+      await spotify.stop()
+      setPlayingSongId(null)
+      return
+    }
+    const uri = normalizeSpotifyUri(song.uriInput)
+    if (!uri.startsWith('spotify:track:')) return
+    setPlayingSongId(song.id)
+    await spotify.playUri(uri, parseFloat(song.startOffset) || 0)
   }
 
   async function fetchTrackTitle(songId: string, rawUri: string) {
@@ -379,14 +402,24 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId, spo
               <div className="border-t border-gray-600 px-3 py-3 flex flex-col gap-3 bg-gray-900/50">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-gray-400">Spotify Link or URI</label>
-                  <input
-                    type="text"
-                    value={song.uriInput}
-                    onChange={e => updateSong(song.id, { uriInput: e.target.value })}
-                    onBlur={e => fetchTrackTitle(song.id, e.target.value)}
-                    className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                    placeholder="Paste Spotify link or spotify:track:…"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={song.uriInput}
+                      onChange={e => updateSong(song.id, { uriInput: e.target.value })}
+                      onBlur={e => fetchTrackTitle(song.id, e.target.value)}
+                      className="flex-1 min-w-0 bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                      placeholder="Paste Spotify link or spotify:track:…"
+                    />
+                    {spotify?.isReady && normalizeSpotifyUri(song.uriInput).startsWith('spotify:track:') && (
+                      <button
+                        onClick={() => handlePreview(song)}
+                        className={`flex-shrink-0 px-3 py-2 rounded-lg text-white text-xs font-semibold transition-colors touch-manipulation ${playingSongId === song.id && spotify.isPlaying ? 'bg-red-700 hover:bg-red-600' : 'bg-green-700 hover:bg-green-600'}`}
+                      >
+                        {playingSongId === song.id && spotify.isPlaying ? '⏹ Stop' : '▶ Listen'}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-gray-400 flex items-center gap-2">
@@ -398,8 +431,18 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId, spo
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-gray-400">Start Offset (seconds)</label>
-                  <input type="number" value={song.startOffset} onChange={e => updateSong(song.id, { startOffset: e.target.value })}
-                    className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" min="0" step="1" placeholder="0" />
+                  <div className="flex gap-2">
+                    <input type="number" value={song.startOffset} onChange={e => updateSong(song.id, { startOffset: e.target.value })}
+                      className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" min="0" step="1" placeholder="0" />
+                    {playingSongId === song.id && spotify?.isPlaying && (
+                      <button
+                        onClick={() => updateSong(song.id, { startOffset: String(Math.floor((spotify.position) / 1000)) })}
+                        className="flex-shrink-0 px-3 py-2 rounded-lg bg-blue-700 hover:bg-blue-600 text-white text-xs font-semibold transition-colors touch-manipulation"
+                      >
+                        Set here
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

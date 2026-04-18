@@ -476,6 +476,7 @@ export default function App() {
                 onDone={() => setIsEditing(false)}
                 initialExpandedSongId={editFocusSongId}
                 spotifyToken={spotify.token}
+                spotify={spotify.isReady ? { isReady: spotify.isReady, isPlaying: spotify.isPlaying, position: spotify.position, playUri: spotify.playUri, stop: spotify.stop } : undefined}
               />
             ) : (
               <PerformanceView
