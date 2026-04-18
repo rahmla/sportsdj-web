@@ -12,7 +12,7 @@ export function OccasionButton({ button, onPress, isPlaying }: Props) {
   return (
     <button
       onClick={onPress}
-      className="relative flex items-center justify-center w-full h-full min-h-[120px] rounded-2xl select-none touch-manipulation transition-transform duration-75 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/30"
+      className="relative flex items-center justify-center w-full h-full min-h-[60px] sm:min-h-[120px] rounded-2xl select-none touch-manipulation transition-transform duration-75 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/30"
       style={{
         backgroundColor: button.colorHex,
         opacity: hasSource ? 1 : 0.6,

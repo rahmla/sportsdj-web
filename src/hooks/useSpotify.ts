@@ -8,11 +8,19 @@ import {
 } from '../utils/pkce'
 
 const TOKEN_KEY = 'spotify_access_token'
+const DEVICE_KEY = 'spotify_connect_device'
 const API_BASE = 'https://api.spotify.com/v1'
 
 export interface SpotifyUser {
   id: string
   displayName: string
+}
+
+export interface SpotifyDevice {
+  id: string
+  name: string
+  type: string
+  isActive: boolean
 }
 
 export interface SpotifyHook {
@@ -24,18 +32,27 @@ export interface SpotifyHook {
   position: number
   duration: number
   error: string | null
+  isMobile: boolean
+  devices: SpotifyDevice[]
+  selectedDeviceId: string | null
   login: () => Promise<void>
   logout: () => void
   playUri: (uri: string, startOffset?: number) => Promise<void>
   pause: () => Promise<void>
   stop: () => Promise<void>
   setVolume: (vol: number) => Promise<void>
+  fetchDevices: () => Promise<void>
+  selectDevice: (id: string) => void
 }
 
 export function useSpotify(): SpotifyHook {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
   const [user, setUser] = useState<SpotifyUser | null>(null)
-  const [deviceId, setDeviceId] = useState<string | null>(null)
+  const [sdkDeviceId, setSdkDeviceId] = useState<string | null>(null)
+  const [connectDeviceId, setConnectDeviceId] = useState<string | null>(
+    () => localStorage.getItem(DEVICE_KEY)
+  )
+  const [devices, setDevices] = useState<SpotifyDevice[]>([])
   const [isReady, setIsReady] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [position, setPosition] = useState(0)
@@ -44,6 +61,17 @@ export function useSpotify(): SpotifyHook {
 
   const playerRef = useRef<Spotify.Player | null>(null)
   const sdkLoadedRef = useRef(false)
+  const isMobile = useRef(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)).current
+  const connectDeviceIdRef = useRef(connectDeviceId)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => { connectDeviceIdRef.current = connectDeviceId }, [connectDeviceId])
+
+  // isReady for mobile = token + selected device
+  useEffect(() => {
+    if (!isMobile) return
+    setIsReady(!!token && !!connectDeviceId)
+  }, [isMobile, token, connectDeviceId])
 
   // Helper: make authenticated fetch, handle 401
   const apiFetch = useCallback(
@@ -87,7 +115,6 @@ export function useSpotify(): SpotifyHook {
         clearCodeVerifier()
         localStorage.setItem(TOKEN_KEY, accessToken)
         setToken(accessToken)
-        // Clean up URL
         const url = new URL(window.location.href)
         url.searchParams.delete('code')
         url.searchParams.delete('state')
@@ -109,29 +136,15 @@ export function useSpotify(): SpotifyHook {
       .catch(() => {})
   }, [token])
 
-  // Load Spotify SDK script when token becomes available
+  // Load Spotify SDK script when token becomes available (desktop only)
   useEffect(() => {
-    if (!token || sdkLoadedRef.current) return
-
-    // Spotify Web Playback SDK is not supported on iOS/Android browsers
-    const ua = navigator.userAgent
-    const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(ua)
-    if (isMobileBrowser) {
-      setError(
-        'The Spotify Web Playback SDK is not supported on mobile browsers. ' +
-        'Open sportsdj-web.vercel.app on a desktop/laptop browser instead, ' +
-        'then use your phone as the Spotify remote.'
-      )
-      return
-    }
-
+    if (!token || sdkLoadedRef.current || isMobile) return
     sdkLoadedRef.current = true
 
     window.onSpotifyWebPlaybackSDKReady = () => {
       initPlayer(token)
     }
 
-    // If SDK already loaded (e.g. hot reload)
     if (window.Spotify) {
       initPlayer(token)
       return
@@ -157,14 +170,14 @@ export function useSpotify(): SpotifyHook {
     })
 
     player.addListener('ready', ({ device_id }) => {
-      setDeviceId(device_id)
+      setSdkDeviceId(device_id)
       setIsReady(true)
       setError(null)
     })
 
     player.addListener('not_ready', () => {
       setIsReady(false)
-      setDeviceId(null)
+      setSdkDeviceId(null)
     })
 
     player.addListener('player_state_changed', (state) => {
@@ -202,10 +215,34 @@ export function useSpotify(): SpotifyHook {
     playerRef.current = player
   }
 
+  // Poll playback state on mobile when playing
+  useEffect(() => {
+    if (!isMobile) return
+    if (!isPlaying) {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+      return
+    }
+    pollRef.current = setInterval(async () => {
+      const res = await apiFetch(`${API_BASE}/me/player`)
+      if (res?.status === 200) {
+        const data = await res.json()
+        setIsPlaying(data.is_playing)
+        setPosition(data.progress_ms ?? 0)
+        setDuration(data.item?.duration_ms ?? 0)
+      } else if (res?.status === 204) {
+        setIsPlaying(false)
+        setPosition(0)
+        setDuration(0)
+      }
+    }, 3000)
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
+  }, [isMobile, isPlaying, apiFetch])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       playerRef.current?.disconnect()
+      if (pollRef.current) clearInterval(pollRef.current)
     }
   }, [])
 
@@ -219,19 +256,51 @@ export function useSpotify(): SpotifyHook {
     playerRef.current?.disconnect()
     playerRef.current = null
     sdkLoadedRef.current = false
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
     localStorage.removeItem(TOKEN_KEY)
     setToken(null)
     setUser(null)
-    setDeviceId(null)
+    setSdkDeviceId(null)
     setIsReady(false)
     setIsPlaying(false)
     setError(null)
   }, [])
 
+  const fetchDevices = useCallback(async () => {
+    const res = await apiFetch(`${API_BASE}/me/player/devices`)
+    if (res?.ok) {
+      const data = await res.json()
+      setDevices((data.devices ?? []).map((d: { id: string; name: string; type: string; is_active: boolean }) => ({
+        id: d.id,
+        name: d.name,
+        type: d.type,
+        isActive: d.is_active,
+      })))
+    }
+  }, [apiFetch])
+
+  const selectDevice = useCallback((id: string) => {
+    setConnectDeviceId(id)
+    localStorage.setItem(DEVICE_KEY, id)
+    setError(null)
+  }, [])
+
+  const pause = useCallback(async () => {
+    const effectiveDeviceId = isMobile ? connectDeviceIdRef.current : sdkDeviceId
+    if (!effectiveDeviceId) return
+    const res = await apiFetch(`${API_BASE}/me/player/pause?device_id=${effectiveDeviceId}`, {
+      method: 'PUT',
+    })
+    if (res && (res.ok || res.status === 204)) {
+      setIsPlaying(false)
+    }
+  }, [isMobile, sdkDeviceId, apiFetch])
+
   const playUri = useCallback(
     async (uri: string, startOffset: number = 0) => {
-      if (!deviceId) {
-        setError('Player not ready. Please wait.')
+      const effectiveDeviceId = isMobile ? connectDeviceIdRef.current : sdkDeviceId
+      if (!effectiveDeviceId) {
+        setError(isMobile ? 'No Spotify device selected. Tap "Select device" to choose.' : 'Player not ready. Please wait.')
         return
       }
 
@@ -245,7 +314,7 @@ export function useSpotify(): SpotifyHook {
       }
 
       const res = await apiFetch(
-        `${API_BASE}/me/player/play?device_id=${deviceId}`,
+        `${API_BASE}/me/player/play?device_id=${effectiveDeviceId}`,
         {
           method: 'PUT',
           body: JSON.stringify(body),
@@ -253,58 +322,79 @@ export function useSpotify(): SpotifyHook {
       )
 
       if (res && !res.ok && res.status !== 204) {
-        const text = await res.text()
-        setError(`Play failed: ${text}`)
+        if (res.status === 404) {
+          setError('Device not found. Open Spotify on the target device first, then try again.')
+        } else if (res.status === 403) {
+          setError('Playback not allowed. Make sure your Spotify Premium account is active.')
+        } else {
+          const text = await res.text()
+          setError(`Play failed (${res.status}): ${text}`)
+        }
       } else {
         setIsPlaying(true)
         setError(null)
       }
     },
-    [deviceId, apiFetch]
+    [isMobile, sdkDeviceId, apiFetch]
   )
 
-  const pause = useCallback(async () => {
-    if (!deviceId) return
-    const res = await apiFetch(`${API_BASE}/me/player/pause?device_id=${deviceId}`, {
-      method: 'PUT',
-    })
-    if (res && (res.ok || res.status === 204)) {
-      setIsPlaying(false)
+  const setVolume = useCallback(async (vol: number) => {
+    if (isMobile) {
+      const devId = connectDeviceIdRef.current
+      if (!devId) return
+      const pct = Math.round(Math.max(0, Math.min(1, vol)) * 100)
+      await apiFetch(`${API_BASE}/me/player/volume?volume_percent=${pct}&device_id=${devId}`, { method: 'PUT' })
+    } else {
+      await playerRef.current?.setVolume(Math.max(0, Math.min(1, vol)))
     }
-  }, [deviceId, apiFetch])
+  }, [isMobile, apiFetch])
 
   const stop = useCallback(async () => {
+    if (isMobile) {
+      const devId = connectDeviceIdRef.current
+      if (devId) {
+        for (let i = 5; i >= 0; i--) {
+          const pct = Math.round((i / 5) * 80)
+          await apiFetch(`${API_BASE}/me/player/volume?volume_percent=${pct}&device_id=${devId}`, { method: 'PUT' })
+          await new Promise(r => setTimeout(r, 150))
+        }
+      }
+      await pause()
+      if (devId) {
+        await apiFetch(`${API_BASE}/me/player/volume?volume_percent=80&device_id=${devId}`, { method: 'PUT' })
+      }
+      return
+    }
     const player = playerRef.current
     if (!player) { await pause(); return }
-    // Fade out over 1 second (20 steps × 50 ms)
     const steps = 20
     for (let i = steps; i >= 0; i--) {
       await player.setVolume(i / steps * 0.8)
       await new Promise(r => setTimeout(r, 50))
     }
     await pause()
-    // Restore volume for next play
     await player.setVolume(0.8)
-  }, [pause])
-
-  const setVolume = useCallback(async (vol: number) => {
-    await playerRef.current?.setVolume(Math.max(0, Math.min(1, vol)))
-  }, [])
+  }, [isMobile, pause, apiFetch])
 
   return {
     token,
     user,
-    deviceId,
+    deviceId: isMobile ? connectDeviceId : sdkDeviceId,
     isReady,
     isPlaying,
     position,
     duration,
     error,
+    isMobile,
+    devices,
+    selectedDeviceId: connectDeviceId,
     login,
     logout,
     playUri,
     pause,
     stop,
     setVolume,
+    fetchDevices,
+    selectDevice,
   }
 }

@@ -277,8 +277,6 @@ function Header({
             <button className={menuItem} onClick={() => { fileRef.current?.click(); setOpen(false) }}>
               <span>⬆️</span> Import
             </button>
-            <input ref={fileRef} type="file" accept=".json" className="hidden"
-              onChange={e => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = '' }} />
             <div className="border-t border-gray-700" />
             <button className={menuItem} onClick={() => { setShowHelp(true); setOpen(false) }}>
               <span>❓</span> Help
@@ -302,6 +300,8 @@ function Header({
           </div>
         </>
       )}
+      <input ref={fileRef} type="file" accept=".json" className="sr-only"
+        onChange={e => { const f = e.target.files?.[0]; if (f) onImport(f); e.target.value = '' }} />
       {importError && <p className="text-red-400 text-xs px-4 py-1 bg-gray-800">{importError}</p>}
 
       {showHelp && (
@@ -315,7 +315,8 @@ function Header({
 
               <section className="flex flex-col gap-2">
                 <h3 className="text-green-400 font-semibold uppercase tracking-wider text-xs">Requirements</h3>
-                <p className="text-gray-300 leading-relaxed">SportsDJ requires a <span className="text-white font-semibold">Spotify Premium</span> account and a <span className="text-white font-semibold">desktop browser</span> (Chrome, Firefox, Edge, or Safari on macOS). It does not work on phones or tablets.</p>
+                <p className="text-gray-300 leading-relaxed">SportsDJ requires a <span className="text-white font-semibold">Spotify Premium</span> account. Works on desktop and mobile browsers.</p>
+                <p className="text-gray-300 leading-relaxed"><span className="text-white font-semibold">On phones/tablets:</span> open Spotify on any device first, then tap <span className="text-white font-semibold">Select Spotify device</span> in the performance view to connect. Spotify will play on the selected device.</p>
               </section>
 
               <section className="flex flex-col gap-2">
@@ -474,6 +475,7 @@ export default function App() {
                 onUpdate={updateEvent}
                 onDone={() => setIsEditing(false)}
                 initialExpandedSongId={editFocusSongId}
+                spotifyToken={spotify.token}
               />
             ) : (
               <PerformanceView

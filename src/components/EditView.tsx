@@ -8,6 +8,7 @@ interface Props {
   onUpdate: (event: DJEvent) => void
   onDone: () => void
   initialExpandedSongId?: string
+  spotifyToken?: string | null
 }
 
 interface EditingButton {
@@ -63,22 +64,32 @@ function toEditingSong(song: SongItem): EditingSong {
   }
 }
 
+function normalizeSpotifyUri(input: string): string {
+  const trimmed = input.trim()
+  if (!trimmed) return ''
+  if (trimmed.startsWith('spotify:')) return trimmed
+  const match = trimmed.match(/open\.spotify\.com\/(track|playlist|album)\/([A-Za-z0-9]+)/)
+  if (match) return `spotify:${match[1]}:${match[2]}`
+  return trimmed
+}
+
 function fromEditingButton(eb: EditingButton): OccasionButton {
   let audioSource: AudioSource | undefined
   if (eb.sourceType === 'mp3' && eb.fileKey) {
     audioSource = { type: 'mp3', uri: '', name: eb.fileName ?? eb.label, fileKey: eb.fileKey, fileName: eb.fileName }
   } else if (eb.uriInput.trim()) {
-    const isPlaylist = eb.uriInput.includes('spotify:playlist:') || eb.uriInput.includes('spotify:album:')
-    audioSource = { type: isPlaylist ? 'spotifyPlaylist' : 'spotifyTrack', uri: eb.uriInput.trim(), name: eb.label }
+    const uri = normalizeSpotifyUri(eb.uriInput)
+    const isPlaylist = uri.includes('spotify:playlist:') || uri.includes('spotify:album:')
+    audioSource = { type: isPlaylist ? 'spotifyPlaylist' : 'spotifyTrack', uri, name: eb.label }
   }
   return { id: eb.id, label: eb.label, colorHex: eb.colorHex, audioSource, startOffset: parseFloat(eb.startOffset) || 0 }
 }
 
 function fromEditingSong(es: EditingSong): SongItem {
-  const hasUri = es.uriInput.trim().length > 0
-  const isPlaylist = es.uriInput.includes('spotify:playlist:') || es.uriInput.includes('spotify:album:')
-  const audioSource: AudioSource | undefined = hasUri
-    ? { type: isPlaylist ? 'spotifyPlaylist' : 'spotifyTrack', uri: es.uriInput.trim(), name: es.title }
+  const uri = normalizeSpotifyUri(es.uriInput)
+  const isPlaylist = uri.includes('spotify:playlist:') || uri.includes('spotify:album:')
+  const audioSource: AudioSource | undefined = uri
+    ? { type: isPlaylist ? 'spotifyPlaylist' : 'spotifyTrack', uri, name: es.title }
     : undefined
   return { id: es.id, title: es.title, audioSource, startOffset: parseFloat(es.startOffset) || 0, order: es.order, playCount: es.playCount }
 }
@@ -102,7 +113,7 @@ function parseCsvRow(row: string): string[] {
   return fields
 }
 
-export function EditView({ profile, onUpdate, onDone, initialExpandedSongId }: Props) {
+export function EditView({ profile, onUpdate, onDone, initialExpandedSongId, spotifyToken }: Props) {
   const [name, setName] = useState(profile.name)
   const [sport, setSport] = useState(profile.sport)
   const [buttons, setButtons] = useState<EditingButton[]>(profile.occasionButtons.map(toEditingButton))
@@ -110,6 +121,7 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId }: P
   const [expandedButtonId, setExpandedButtonId] = useState<string | null>(null)
   const [expandedSongId, setExpandedSongId] = useState<string | null>(initialExpandedSongId ?? null)
   const [importError, setImportError] = useState<string | null>(null)
+  const [fetchingTitleId, setFetchingTitleId] = useState<string | null>(null)
   const csvFileRef = useRef<HTMLInputElement>(null)
   const mp3FileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -165,6 +177,27 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId }: P
 
   function updateSong(id: string, patch: Partial<EditingSong>) {
     setSongs(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
+  }
+
+  async function fetchTrackTitle(songId: string, rawUri: string) {
+    if (!spotifyToken) return
+    const uri = normalizeSpotifyUri(rawUri)
+    const trackId = uri.match(/^spotify:track:([A-Za-z0-9]+)$/)?.[1]
+    if (!trackId) return
+    setFetchingTitleId(songId)
+    try {
+      const res = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+        headers: { Authorization: `Bearer ${spotifyToken}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const artist = data.artists?.[0]?.name ?? ''
+        const title = artist ? `${data.name} – ${artist}` : data.name
+        setSongs(prev => prev.map(s => s.id === songId ? { ...s, title, uriInput: uri } : s))
+      }
+    } finally {
+      setFetchingTitleId(null)
+    }
   }
 
   function addSong() {
@@ -345,14 +378,23 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId }: P
             {expandedSongId === song.id && (
               <div className="border-t border-gray-600 px-3 py-3 flex flex-col gap-3 bg-gray-900/50">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-400">Title</label>
-                  <input type="text" value={song.title} onChange={e => updateSong(song.id, { title: e.target.value })}
-                    className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Song title" />
+                  <label className="text-xs text-gray-400">Spotify Link or URI</label>
+                  <input
+                    type="text"
+                    value={song.uriInput}
+                    onChange={e => updateSong(song.id, { uriInput: e.target.value })}
+                    onBlur={e => fetchTrackTitle(song.id, e.target.value)}
+                    className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    placeholder="Paste Spotify link or spotify:track:…"
+                  />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-400">Spotify URI <span className="text-gray-500">(spotify:track:… or spotify:playlist:…)</span></label>
-                  <input type="text" value={song.uriInput} onChange={e => updateSong(song.id, { uriInput: e.target.value })}
-                    className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" placeholder="spotify:track:0abc…" />
+                  <label className="text-xs text-gray-400 flex items-center gap-2">
+                    Title
+                    {fetchingTitleId === song.id && <span className="text-gray-500 normal-case font-normal">Fetching…</span>}
+                  </label>
+                  <input type="text" value={song.title} onChange={e => updateSong(song.id, { title: e.target.value })}
+                    className="bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Song title" />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-gray-400">Start Offset (seconds)</label>
