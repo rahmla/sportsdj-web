@@ -6,7 +6,7 @@ import { saveMp3, deleteMp3 } from '../utils/mp3Storage'
 interface SpotifyPreview {
   isReady: boolean
   isPlaying: boolean
-  position: number
+  getPosition: () => number
   playUri: (uri: string, offset?: number) => Promise<void>
   stop: () => Promise<void>
 }
@@ -436,7 +436,7 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId, spo
                       className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" min="0" step="1" placeholder="0" />
                     {playingSongId === song.id && spotify?.isPlaying && (
                       <button
-                        onClick={() => updateSong(song.id, { startOffset: String(Math.floor((spotify.position) / 1000)) })}
+                        onClick={() => updateSong(song.id, { startOffset: String(Math.floor(spotify.getPosition() / 1000)) })}
                         className="flex-shrink-0 px-3 py-2 rounded-lg bg-blue-700 hover:bg-blue-600 text-white text-xs font-semibold transition-colors touch-manipulation"
                       >
                         Set here

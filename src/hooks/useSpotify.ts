@@ -43,6 +43,7 @@ export interface SpotifyHook {
   setVolume: (vol: number) => Promise<void>
   fetchDevices: () => Promise<void>
   selectDevice: (id: string) => void
+  getPosition: () => number
 }
 
 export function useSpotify(): SpotifyHook {
@@ -57,6 +58,8 @@ export function useSpotify(): SpotifyHook {
   const [isPlaying, setIsPlaying] = useState(false)
   const [position, setPosition] = useState(0)
   const [duration, setDuration] = useState(0)
+
+  function updatePosition(ms: number) { positionRef.current = ms; setPosition(ms) }
   const [error, setError] = useState<string | null>(null)
 
   const playerRef = useRef<Spotify.Player | null>(null)
@@ -64,6 +67,7 @@ export function useSpotify(): SpotifyHook {
   const isMobile = useRef(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)).current
   const connectDeviceIdRef = useRef(connectDeviceId)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const positionRef = useRef(0)
 
   useEffect(() => { connectDeviceIdRef.current = connectDeviceId }, [connectDeviceId])
 
@@ -183,11 +187,11 @@ export function useSpotify(): SpotifyHook {
     player.addListener('player_state_changed', (state) => {
       if (state) {
         setIsPlaying(!state.paused)
-        setPosition(state.position)
+        updatePosition(state.position)
         setDuration(state.duration)
       } else {
         setIsPlaying(false)
-        setPosition(0)
+        updatePosition(0)
         setDuration(0)
       }
     })
@@ -220,7 +224,7 @@ export function useSpotify(): SpotifyHook {
     if (isMobile || !isPlaying) return
     const tick = setInterval(async () => {
       const state = await playerRef.current?.getCurrentState()
-      if (state) setPosition(state.position)
+      if (state) updatePosition(state.position)
     }, 500)
     return () => clearInterval(tick)
   }, [isMobile, isPlaying])
@@ -237,11 +241,11 @@ export function useSpotify(): SpotifyHook {
       if (res?.status === 200) {
         const data = await res.json()
         setIsPlaying(data.is_playing)
-        setPosition(data.progress_ms ?? 0)
+        updatePosition(data.progress_ms ?? 0)
         setDuration(data.item?.duration_ms ?? 0)
       } else if (res?.status === 204) {
         setIsPlaying(false)
-        setPosition(0)
+        updatePosition(0)
         setDuration(0)
       }
     }, 3000)
@@ -406,5 +410,6 @@ export function useSpotify(): SpotifyHook {
     setVolume,
     fetchDevices,
     selectDevice,
+    getPosition: () => positionRef.current,
   }
 }
