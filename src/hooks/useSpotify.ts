@@ -215,6 +215,16 @@ export function useSpotify(): SpotifyHook {
     playerRef.current = player
   }
 
+  // Tick position on desktop using local SDK call (no network)
+  useEffect(() => {
+    if (isMobile || !isPlaying) return
+    const tick = setInterval(async () => {
+      const state = await playerRef.current?.getCurrentState()
+      if (state) setPosition(state.position)
+    }, 500)
+    return () => clearInterval(tick)
+  }, [isMobile, isPlaying])
+
   // Poll playback state on mobile when playing
   useEffect(() => {
     if (!isMobile) return
