@@ -133,7 +133,15 @@ export function useSpotify(): SpotifyHook {
   useEffect(() => {
     if (!token) return
     fetch(`${API_BASE}/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : null)
+      .then(r => {
+        if (r.status === 401) {
+          localStorage.removeItem(TOKEN_KEY)
+          setToken(null)
+          setIsReady(false)
+          return null
+        }
+        return r.ok ? r.json() : null
+      })
       .then(data => {
         if (data) setUser({ id: data.id, displayName: data.display_name ?? data.id })
       })
