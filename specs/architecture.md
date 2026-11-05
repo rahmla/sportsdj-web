@@ -70,9 +70,9 @@ A change that breaks an `[x]` property needs a spec change first, just like a be
 - [x] **ARCH-42** Persistence happens as a side effect of `useEvents.setEvents`. Every commit writes the whole event list to localStorage.
 
 ### Quality & tooling
-- [x] **ARCH-50** TypeScript strict build (`tsc -b`) plus ESLint (`npm run lint`) are the only automated checks.
-- [ ] **ARCH-51** Pure logic (URI normalisation, CSV parsing, event import/validation, storage) is moved out of components into `src/utils/` and covered by Vitest. Test names cite criterion IDs.
-- [ ] **ARCH-52** Every new feature or behaviour change ships with automated tests that cover its acceptance criteria, and test names cite the criterion IDs. Logic goes into `src/utils/` or a hook so it can be tested without Spotify. A criterion that cannot be automated (for example real audio playback) is marked as manually verified in its spec. A change is not done until `npm test`, `npm run lint` and `npm run build` pass. Applies once ARCH-51 / F-016 is in place.
+- [x] **ARCH-50** Automated checks are the TypeScript strict build (`tsc -b`), ESLint (`npm run lint`) and the Vitest suite (`npm test`, see ARCH-51 and ARCH-52).
+- [x] **ARCH-51** Pure logic (URI normalisation, CSV parsing, event import/validation, storage) is moved out of components into `src/utils/` and covered by Vitest. Test names cite criterion IDs.
+- [x] **ARCH-52** Every new feature or behaviour change ships with automated tests that cover its acceptance criteria, and test names cite the criterion IDs. Logic goes into `src/utils/` or a hook so it can be tested without Spotify. A criterion that cannot be automated (for example real audio playback) is marked as manually verified in its spec. A change is not done until `npm test`, `npm run lint` and `npm run build` pass.
 
 ## Module map
 

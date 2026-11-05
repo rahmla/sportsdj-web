@@ -13,7 +13,7 @@ Rules for every change:
 2. **Cite IDs.** Commit messages and test names reference the criterion IDs they satisfy (e.g. `PLAY-11`).
 3. **Close the loop.** When a criterion is implemented and verified, flip it to `[x]` and mark the `changelog.md` row `shipped` (with date and commits) in the same commit.
 4. **Spec drift.** If the code and the spec disagree, do not silently "fix" either one. Point out the mismatch and ask which is right.
-5. **Tests for every feature.** Every new feature or behaviour change ships with automated tests for its criteria (ARCH-52). A change is not done until `npm test`, `npm run lint` and `npm run build` pass. Applies once F-016 has shipped.
+5. **Tests for every feature.** Every new feature or behaviour change ships with automated tests for its criteria (ARCH-52). A change is not done until `npm test`, `npm run lint` and `npm run build` pass.
 
 ## Tech stack
 
@@ -24,5 +24,6 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, static SPA on Vercel. Details a
 - `npm run dev` — dev server (HTTPS via basic-ssl, needed for the Spotify SDK)
 - `npm run build` — type-check and build
 - `npm run lint`
+- `npm test` — run all tests once (Vitest); `npm run test:watch` for watch mode
 
-There are no automated tests yet. Until there are, verify criteria manually in the running app.
+Tests live next to the code (`*.test.ts`, `*.test.tsx`) and cite criterion IDs in their names. Criteria that need real audio or a Spotify device (playback, auto-advance, MP3) are verified manually in the running app. Vercel runs `npm test` before every build.

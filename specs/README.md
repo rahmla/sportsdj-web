@@ -44,7 +44,7 @@ Each criterion carries one marker:
    where it helps). No implementation details unless they are a real constraint.
 2. **Review.** Read the spec diff and agree on it *before* code is written. Resolve every `[?]` the change touches.
 3. **Implement.** Build the smallest change that satisfies the new criteria.
-4. **Verify.** Check each touched criterion: automated test where possible, otherwise
+4. **Verify.** Check each touched criterion: automated test where possible (`npm test`), otherwise
    a manual check in the running app (desktop and, for `DEV`/`PLAY`, a phone).
 5. **Close.** Flip the criteria to `[x]` and set the `changelog.md` row to `shipped`, with the date and commits, in the same commit as the code.
 

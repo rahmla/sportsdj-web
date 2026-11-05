@@ -16,7 +16,7 @@ The spec files describe how the app behaves now. This log records how it got the
 
 | ID | Feature | Status | Specified | Shipped | Spec | Commits | Notes |
 |----|---------|--------|-----------|---------|------|---------|-------|
-| F-016 | Automated tests (Vitest): pure-logic unit tests, a few UI flow tests, run in the build | specified | 2026-11-05 | — | TEST-01…40, ARCH-51 | — | Spec is draft, awaiting OK. Should land before the layout features (IDEA-06 to IDEA-08) |
+| F-016 | Automated tests (Vitest): pure-logic unit tests, a few UI flow tests, run in the build | shipped | 2026-11-05 | 2026-11-05 | TEST-01…40, ARCH-51 | f7af3a2, 37d61bc, 7d5dff8, e4ae63d, and the commit that flips this row | Vercel build runs `npm test` first (vercel.json). Fixed 2 pre-existing lint errors on the way |
 | F-015 | Full Beachvolley template (100+ songs); Volleyball template removed | shipped | — | 2026-04-18 | EVT-03 | 0d45a6b, 4117de8 | |
 | F-014 | Song preview in Edit mode, with "Set here" offset picker | shipped | — | 2026-04-18 | SONG-13, SONG-14 | 314b216, d52304a, 44c7438 | |
 | F-013 | Mobile support through Spotify Connect, plus auto-fetch of song titles | shipped | — | 2026-04-18 | DEV-01…08, SONG-12, ARCH-30, AD-3 | 3e0ee4e, acd9bd3 | acd9bd3 is the iOS PWA cache-header fix (ARCH-02) |
