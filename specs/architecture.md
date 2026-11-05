@@ -35,11 +35,11 @@ A change that breaks an `[x]` property needs a spec change first, just like a be
 - [x] **ARCH-01** The app is a static single-page app with **no backend**. Vercel serves the built `dist/` and rewrites every path to `/index.html` (`vercel.json`).
 - [x] **ARCH-02** `index.html` is served with `Cache-Control: no-store`, and the hashed files under `/assets/*` are served as `immutable` for one year. This lets an installed iOS PWA pick up a new deploy without stalling.
 - [x] **ARCH-03** The app installs as a PWA in standalone mode (`public/manifest.json`). There is no service worker and no offline support.
-- [x] **ARCH-04** Development runs over HTTPS (`@vitejs/plugin-basic-ssl`), because Spotify OAuth redirects and the SDK need a secure origin.
+- [x] **ARCH-04** Development runs on `http://127.0.0.1:5173`. Spotify requires https for redirect URIs except for loopback IP addresses, and browsers treat a loopback address as a secure origin, which the Web Playback SDK needs. (It used `@vitejs/plugin-basic-ssl` over `https://localhost` before 2026-11-05.)
 
 ### Security & identity
 - [x] **ARCH-10** Authentication is the OAuth 2.0 Authorization Code flow with **PKCE**. The public client id lives in `src/utils/pkce.ts`, and there is no client secret anywhere.
-- [x] **ARCH-11** The redirect URIs are fixed: `https://127.0.0.1:5173/callback` in dev (Spotify rejects `localhost` as an insecure redirect URI, so open the dev app at `https://127.0.0.1:5173/`) and `https://sportsdj-web.vercel.app/callback` in prod. Any new domain must also be registered in the Spotify dashboard.
+- [x] **ARCH-11** The redirect URIs are fixed: `http://127.0.0.1:5173/callback` in dev (Spotify rejects `localhost` as an insecure redirect URI, so open the dev app at `http://127.0.0.1:5173/`) and `https://sportsdj-web.vercel.app/callback` in prod. Any new domain must also be registered in the Spotify dashboard.
 - [x] **ARCH-12** The PKCE code verifier is kept in localStorage, not sessionStorage, because Safari clears sessionStorage during cross-origin redirects.
 - [x] **ARCH-13** Spotify credentials (the token and device id) are never stored inside an event and never included in an export.
 - [x] **ARCH-14** Every Web API call goes through `apiFetch`. A `401` response clears the token, which sends the DJ back to login.

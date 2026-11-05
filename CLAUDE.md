@@ -21,7 +21,7 @@ React 19 + TypeScript + Vite 8 + Tailwind CSS 4, static SPA on Vercel. Details a
 
 ## Commands
 
-- `npm run dev` — dev server (HTTPS via basic-ssl, needed for the Spotify SDK)
+- `npm run dev` — dev server at http://127.0.0.1:5173 (use the IP, not localhost: Spotify rejects localhost redirect URIs)
 - `npm run build` — type-check and build
 - `npm run lint`
 - `npm test` — run all tests once (Vitest); `npm run test:watch` for watch mode
