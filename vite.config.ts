@@ -5,6 +5,8 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), basicSsl()],
+  // Spotify rejects `localhost` redirect URIs, so dev runs on the loopback IP (ARCH-11)
+  server: { host: '127.0.0.1' },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

@@ -39,7 +39,7 @@ A change that breaks an `[x]` property needs a spec change first, just like a be
 
 ### Security & identity
 - [x] **ARCH-10** Authentication is the OAuth 2.0 Authorization Code flow with **PKCE**. The public client id lives in `src/utils/pkce.ts`, and there is no client secret anywhere.
-- [x] **ARCH-11** The redirect URIs are fixed: `https://localhost:5173/callback` in dev and `https://sportsdj-web.vercel.app/callback` in prod. Any new domain must also be registered in the Spotify dashboard.
+- [x] **ARCH-11** The redirect URIs are fixed: `https://127.0.0.1:5173/callback` in dev (Spotify rejects `localhost` as an insecure redirect URI, so open the dev app at `https://127.0.0.1:5173/`) and `https://sportsdj-web.vercel.app/callback` in prod. Any new domain must also be registered in the Spotify dashboard.
 - [x] **ARCH-12** The PKCE code verifier is kept in localStorage, not sessionStorage, because Safari clears sessionStorage during cross-origin redirects.
 - [x] **ARCH-13** Spotify credentials (the token and device id) are never stored inside an event and never included in an export.
 - [x] **ARCH-14** Every Web API call goes through `apiFetch`. A `401` response clears the token, which sends the DJ back to login.
