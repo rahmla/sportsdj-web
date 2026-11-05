@@ -69,3 +69,12 @@ Use the Screen Wake Lock API so the phone or tablet does not sleep while the DJ 
 Songs can only be Spotify tracks today, while buttons can also use MP3. Allow MP3 songs too. Interacts with auto-advance (PLAY-21, which skips MP3 songs) and with export (IDEA-04).
 
 *Landscape and tablet layout is covered by IDEA-08. Reordering songs is IDEA-01.*
+
+### IDEA-15 Better event menu: create and share events more easily
+**Added:** 2026-11-05 · **Status:** new · **From:** EVT-01, EVT-10, EVT-12, EVT-30, EVT-31
+The menu has "New event", "Open event", "Close event", "Export" and "Import", and it is unclear what the first three are for. Today "New" creates an event (empty or from a template), "Open" switches between the events stored in this browser, and "Close" only shows the empty "No active event" screen. Export and Import are the only way to move an event to another device or person, through a JSON file. Sharing and creating should be easier.
+Possible directions, not decided:
+- One "Events" screen with a card per event, replacing New / Open / Close. Each card can switch to, duplicate, rename, export and delete the event, and a "+ New event" card starts from a template or empty. "Close" probably goes away (the empty state is then only for first use).
+- Easier sharing: a share link or QR code instead of a file, the system share sheet on phones, or "copy to clipboard". A link needs either a backend or the event packed into the URL (a 100-song event may be too big for that).
+- Easier creation: a template gallery, "duplicate this event", and creating an event from a Spotify playlist or CSV in one step (SONG-15).
+Related: IDEA-04 (MP3 files are not exported), EVT-40 (import does not validate), EVT-91 and EVT-92 (open questions on deleting and unsaved edits).
