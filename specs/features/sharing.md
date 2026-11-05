@@ -1,6 +1,6 @@
 # Sharing events by link
 
-**Area code:** `SHARE`  ·  **Status:** draft
+**Area code:** `SHARE`  ·  **Status:** agreed
 
 ## Why
 
@@ -43,13 +43,13 @@ Today an event can only be moved between devices or people as a JSON file (EVT-3
 - [ ] **SHARE-41** An event over the size limit shows "This event is too large to share" and nothing is uploaded.
 - [ ] **SHARE-42** Opening a link while an event is being edited does not discard the unsaved edits (see EVT-92).
 
-## Open questions
+## Decisions (agreed 2026-11-05)
 
-- [?] **SHARE-90** How long should a link live? Proposed: 90 days, renewed each time the link is opened.
-- [?] **SHARE-91** Where are snapshots stored? Options: Vercel Blob (simple files) or a Marketplace key-value store such as Upstash Redis (also gives easy expiry and rate limiting). Proposed: Redis, for the expiry and the rate limit.
-- [?] **SHARE-92** Should the person who shared be able to delete a link early? That needs a delete token kept on their device. Proposed: not in the first version.
-- [?] **SHARE-93** Should Share require being logged in to Spotify (some accountability) or be open to anyone who has the app? Proposed: no check, since the app needs Spotify to be usable anyway.
-- [?] **SHARE-94** Do we split the work? Proposed: F-019 is sharing only, and the menu redesign (a single Events screen, duplicate, no "Close") is a separate feature afterwards.
+- [x] **SHARE-90** Links live 90 days, renewed each time the link is opened.
+- [x] **SHARE-91** Snapshots are stored in a Marketplace Redis store (Upstash), which gives expiry and the rate limit.
+- [x] **SHARE-92** No early delete of a link in the first version.
+- [x] **SHARE-93** Sharing needs no Spotify login check.
+- [x] **SHARE-94** F-019 is sharing only. The Events screen redesign is a separate feature afterwards (IDEA-15).
 
 ## Notes
 

@@ -2,7 +2,7 @@
   "buildCommand": "npm test && npm run build",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],

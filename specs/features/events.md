@@ -31,7 +31,7 @@ A DJ works many different events and sports, and wants to set each one up once a
 
 ## Edge cases & errors
 
-- [ ] **EVT-40** Importing JSON that is valid but is not an event (missing `occasionButtons` or `songs`) is rejected with a clear message. Today it is accepted and can crash the views. (Technical side: ARCH-24.)
+- [x] **EVT-40** Importing JSON that is valid but is not an event (missing `occasionButtons` or `songs`) is rejected with a clear message ("Invalid event file: …"). (Technical side: ARCH-24.)
 
 ## Open questions
 

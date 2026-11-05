@@ -18,4 +18,12 @@ describe('event file', () => {
     expect(() => parseEventFile('{not json')).toThrow('Invalid event file')
     expect(() => parseEventFile('')).toThrow('Invalid event file')
   })
+
+  test('EVT-40 ARCH-24 TEST-12 JSON that is not an event is rejected with a reason', () => {
+    expect(() => parseEventFile('null')).toThrow('Invalid event file: The file does not contain an event')
+    expect(() => parseEventFile('123')).toThrow('Invalid event file')
+    expect(() => parseEventFile('{}')).toThrow('Invalid event file: The event has no name')
+    expect(() => parseEventFile('{"name":"X"}')).toThrow('occasionButtons')
+    expect(() => parseEventFile('{"name":"X","occasionButtons":[]}')).toThrow('songs')
+  })
 })
