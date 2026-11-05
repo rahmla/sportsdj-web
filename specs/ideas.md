@@ -37,11 +37,11 @@ The redirect URI is hardcoded to production, so Spotify login only works on `spo
 Split the song list into tabs, one per theme or section (for example "Warm-up", "Rally music", "Breaks", "Finals"). The DJ configures the tabs in Edit mode: add, rename, reorder and delete. Open points: does each song belong to exactly one tab? What happens to the songs when a tab is deleted? Does auto-advance (PLAY-21) stay inside the current tab? Needs a new field on songs and on the event data (ARCH data model, export format).
 
 ### IDEA-07 Songs as a grid of small squares
-**Added:** 2026-11-05 · **Status:** exploring · **From:** SONG-01
+**Added:** 2026-11-05 · **Status:** promoted → F-017 · **From:** SONG-01
 Show songs as small tiles in a grid instead of a list, like the occasion buttons. Easier to hit with a thumb and shows more songs at once. Open points: how much of the title fits, and where the play counter (SONG-02) and the "currently playing" state go. Could be a per-event or per-device toggle between list and grid.
 
 ### IDEA-08 Flexible app width
-**Added:** 2026-11-05 · **Status:** exploring · **From:** BTN-01
+**Added:** 2026-11-05 · **Status:** promoted → F-018 · **From:** BTN-01
 Drop the fixed width so the app uses the whole screen (tablet, laptop, landscape phone). Open points: how many button columns on wide screens (BTN-01 says 8 from `sm` up), and whether the song list sits beside the buttons on wide screens.
 
 ### IDEA-09 Search or filter the song list
