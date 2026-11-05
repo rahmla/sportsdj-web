@@ -3,7 +3,7 @@ import type { DJEvent, AudioSource } from '../types'
 import { sourceId } from '../types'
 import type { SpotifyHook, SpotifyDevice } from '../hooks/useSpotify'
 import { OccasionButton } from './OccasionButton'
-import { SongRow } from './SongRow'
+import { SongTile } from './SongTile'
 import { StopButton } from './StopButton'
 import { getMp3 } from '../utils/mp3Storage'
 
@@ -263,11 +263,12 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
   }
 
   const effectivelyPlayingId = isAnyPlaying ? playingId : null
+  const hasSongs = profile.songs.length > 0
 
   return (
     <div className="h-full flex flex-col">
-      {/* Top section — always visible */}
-      <div className="flex-shrink-0 flex flex-col gap-3 p-3 sm:p-5">
+      {/* Status row + errors — always visible, full width (LAY-11) */}
+      <div className="flex-shrink-0 flex flex-col gap-3 px-3 pt-3 sm:px-5 sm:pt-5">
         {/* Status row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -309,6 +310,12 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
           <div className="bg-red-900/60 border border-red-700 rounded-lg px-4 py-2 text-red-200 text-sm">{spotify.error}</div>
         )}
 
+      </div>
+
+      {/* Body: stacked below 1024 px, buttons left and songs right from 1024 px (LAY-10, LAY-11) */}
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+      {/* Buttons + STOP — always visible */}
+      <div className={['flex-shrink-0 flex flex-col gap-3 p-3 sm:p-5 sm:pb-3 lg:pb-5 lg:min-h-0 lg:overflow-y-auto', hasSongs ? 'lg:w-3/5' : 'lg:w-full'].join(' ')}>
         {/* Occasion buttons — 4 columns on mobile, 8 on wider screens */}
         <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 sm:gap-3" style={{ gridAutoRows: '1fr' }}>
           {profile.occasionButtons.map(btn => (
@@ -324,13 +331,13 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
         <StopButton onStop={handleStop} disabled={!isAnyPlaying} elapsed={elapsed} />
       </div>
 
-      {/* Songs — scrollable */}
-      {profile.songs.length > 0 && (
-        <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2 px-3 sm:px-5 pb-4">
+      {/* Songs — scrollable (SONG-01, SONG-20) */}
+      {hasSongs && (
+        <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2 px-3 sm:px-5 pb-4 lg:w-2/5 lg:flex-none lg:pt-5">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">Songs</h2>
-          <div className="flex flex-col gap-1.5">
+          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))' }}>
             {profile.songs.slice().sort((a, b) => a.order - b.order).map(song => (
-              <SongRow
+              <SongTile
                 key={song.id}
                 song={song}
                 onPress={() => { if (song.audioSource) handlePlay(song.audioSource, song.startOffset, song.id) }}
@@ -346,6 +353,7 @@ export function PerformanceView({ profile, spotify, onEdit, onUpdate }: Props) {
           )}
         </div>
       )}
+      </div>
 
       {showDevicePicker && (
         <DevicePickerModal

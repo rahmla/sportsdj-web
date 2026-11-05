@@ -1,6 +1,6 @@
 # App layout and width
 
-**Area code:** `LAY`  ·  **Status:** draft
+**Area code:** `LAY`  ·  **Status:** agreed
 
 ## Why
 
@@ -32,8 +32,8 @@ The app is capped at 1024 px and centred, so on a tablet or laptop a lot of the 
 
 ## Open questions
 
-- [?] **LAY-90** The switch to two columns is proposed at 1024 px (`lg`). A tablet in portrait (about 768 px) would get the stacked layout. Is that right?
-- [?] **LAY-91** A phone in landscape is wide enough for two columns only above 1024 px, which most phones are not. Is the stacked layout acceptable there?
+- [x] **LAY-90** (agreed 2026-11-05) The switch to two columns is proposed at 1024 px (`lg`). A tablet in portrait (about 768 px) would get the stacked layout. Is that right?
+- [x] **LAY-91** (agreed 2026-11-05) A phone in landscape is wide enough for two columns only above 1024 px, which most phones are not. Is the stacked layout acceptable there?
 
 ## Notes
 

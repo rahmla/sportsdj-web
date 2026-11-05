@@ -10,20 +10,20 @@ Between rallies and during breaks, the DJ plays songs from a prepared, ordered l
 
 ### In performance mode
 - [ ] **SONG-01** Songs are shown as a grid of tiles (SONG-20), sorted by `order`, and the song area scrolls on its own. *(Changed by F-017. It was a list of rows.)*
-- [ ] **SONG-02** Each tile shows a play counter. It goes up by 1 every time the song is started. *(Changed by F-017. The counter used to be on the left of a row.)*
+- [x] **SONG-02** Each tile shows a play counter. It goes up by 1 every time the song is started. *(Changed by F-017. The counter used to be on the left of a row.)*
 - [x] **SONG-03** "Reset" sets every play counter in the event back to 0.
 
 ### Song grid (F-017, replaces the list)
 - [ ] **SONG-20** Songs are square tiles in a grid. The number of columns follows the available width, with tiles at least 104 px wide, so phones get 3 or more per row and wide screens get more.
-- [ ] **SONG-21** A tile shows the song title, centred, cut off with "…" after 3 lines. The full title is the tile's accessible name ("Play <title>") and its tooltip.
-- [ ] **SONG-22** The play counter is a small badge in the tile's top-left corner. It is green when above 0 and grey at 0 (as in the old list).
-- [ ] **SONG-23** The tile of the song that is playing is highlighted with a green background and ring (as in the old list).
-- [ ] **SONG-24** A tile whose song has no source is dimmed and does nothing when tapped (PLAY-03).
-- [ ] **SONG-25** The reading order of the grid (left to right, top to bottom) is the `order` of the songs. Auto-advance (PLAY-21) still starts the next song in that order.
-- [ ] **SONG-26** The "Songs" heading and the "Reset play counters" button (SONG-03) stay above and below the grid, with the same behaviour.
+- [x] **SONG-21** A tile shows the song title, centred, cut off with "…" after 3 lines. The full title is the tile's accessible name ("Play <title>") and its tooltip.
+- [x] **SONG-22** The play counter is a small badge in the tile's top-left corner. It is green when above 0 and grey at 0 (as in the old list).
+- [x] **SONG-23** The tile of the song that is playing is highlighted with a green background and ring (as in the old list).
+- [x] **SONG-24** A tile whose song has no source is dimmed and does nothing when tapped (PLAY-03).
+- [x] **SONG-25** The reading order of the grid (left to right, top to bottom) is the `order` of the songs. Auto-advance (PLAY-21) still starts the next song in that order.
+- [x] **SONG-26** The "Songs" heading and the "Reset play counters" button (SONG-03) stay above and below the grid, with the same behaviour.
 
 ### Edge cases
-- [ ] **SONG-40** A very long title, or a title without spaces, stays inside its tile and does not widen the grid.
+- [x] **SONG-40** A very long title, or a title without spaces, stays inside its tile and does not widen the grid.
 
 ### Editing (Edit mode → "Songs")
 - [x] **SONG-10** "+ Song" adds a song titled "New Song" at the end and opens its editor.

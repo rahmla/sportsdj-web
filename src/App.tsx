@@ -450,7 +450,7 @@ export default function App() {
 
   return (
     <div className="h-screen bg-gray-900 overflow-hidden">
-      <div className="mx-auto w-full max-w-5xl h-full flex flex-col bg-gray-900 shadow-2xl">
+      <div className="w-full h-full flex flex-col bg-gray-900">
 
         <Header
           eventName={activeEvent?.name ?? 'SportsDJ'}
@@ -470,6 +470,7 @@ export default function App() {
         <div className="flex-1 overflow-y-auto min-h-0">
           {activeEvent ? (
             isEditing ? (
+              <div className="mx-auto w-full max-w-3xl">
               <EditView
                 profile={activeEvent}
                 onUpdate={updateEvent}
@@ -478,6 +479,7 @@ export default function App() {
                 spotifyToken={spotify.token}
                 spotify={spotify.isReady ? { isReady: spotify.isReady, isPlaying: spotify.isPlaying, getPosition: spotify.getPosition, playUri: spotify.playUri, stop: spotify.stop } : undefined}
               />
+              </div>
             ) : (
               <PerformanceView
                 profile={activeEvent}

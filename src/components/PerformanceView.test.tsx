@@ -61,9 +61,21 @@ describe('PerformanceView', () => {
     expect(screen.queryByRole('button', { name: 'Reset play counters' })).not.toBeInTheDocument()
   })
 
-  test('SONG-01 the song list shows every song title', () => {
-    render(<Harness spotify={fakeSpotify()} />)
-    expect(screen.getByRole('button', { name: 'Play First Song' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Play Second Song' })).toBeInTheDocument()
+  test('SONG-01 SONG-25 the grid shows every song, in the order of their `order` field', () => {
+    const ev = sampleEvent()
+    ev.songs = [{ ...ev.songs[0], order: 2 }, { ...ev.songs[1], order: 1 }]
+    render(<PerformanceView profile={ev} spotify={fakeSpotify()} onEdit={vi.fn()} onUpdate={vi.fn()} />)
+    const names = screen.getAllByRole('button', { name: /^Play / }).map(b => b.getAttribute('aria-label'))
+    expect(names).toEqual(['Play Second Song', 'Play First Song'])
+  })
+
+  test('SONG-26 the Songs heading is shown, and an event without songs has no song area', () => {
+    const { unmount } = render(<Harness spotify={fakeSpotify()} />)
+    expect(screen.getByRole('heading', { name: 'Songs' })).toBeInTheDocument()
+    unmount()
+    const ev = { ...sampleEvent(), songs: [] }
+    render(<PerformanceView profile={ev} spotify={fakeSpotify()} onEdit={vi.fn()} onUpdate={vi.fn()} />)
+    expect(screen.queryByRole('heading', { name: 'Songs' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'ACE' })).toBeInTheDocument()
   })
 })
