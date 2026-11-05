@@ -16,7 +16,7 @@ The spec files describe how the app behaves now. This log records how it got the
 
 | ID | Feature | Status | Specified | Shipped | Spec | Commits | Notes |
 |----|---------|--------|-----------|---------|------|---------|-------|
-| F-018 | Flexible app width: full-width layout, song list beside the buttons on wide screens | in progress | 2026-11-05 | — | LAY-01…21 | — | Promoted from IDEA-08. Built, waiting for a manual layout check at phone / tablet / desktop widths |
+| F-018 | Flexible app width: full-width layout, song grid with more tiles per row on wide screens | in progress | 2026-11-05 | — | LAY-01, LAY-02, LAY-10, LAY-14, LAY-20, LAY-21 | — | Promoted from IDEA-08. The two-column layout (LAY-11…13) was tried and dropped on 2026-11-05: tiles stay under the buttons. Built, waiting for a manual layout check at phone / tablet / desktop widths |
 | F-017 | Songs as a grid of square tiles instead of a list | in progress | 2026-11-05 | — | SONG-01, SONG-02, SONG-20…26, SONG-40 | — | Promoted from IDEA-07. The grid replaces the list. Built; SONG-01 and SONG-20 wait for a manual layout check |
 | F-016 | Automated tests (Vitest): pure-logic unit tests, a few UI flow tests, run in the build | shipped | 2026-11-05 | 2026-11-05 | TEST-01…40, ARCH-51 | f7af3a2, 37d61bc, 7d5dff8, e4ae63d, and the commit that flips this row | Vercel build runs `npm test` first (vercel.json). Fixed 2 pre-existing lint errors on the way |
 | F-015 | Full Beachvolley template (100+ songs); Volleyball template removed | shipped | — | 2026-04-18 | EVT-03 | 0d45a6b, 4117de8 | |

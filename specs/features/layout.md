@@ -4,11 +4,11 @@
 
 ## Why
 
-The app is capped at 1024 px and centred, so on a tablet or laptop a lot of the screen is empty, and the DJ has to scroll the song list under the buttons. On wide screens the buttons and the songs should both be in view at once.
+The app is capped at 1024 px and centred, so on a tablet or laptop a lot of the screen is empty on a tablet or laptop. The app should use the full width, with the song grid showing more tiles per row.
 
 ## Scope
 
-- In: the width of the app in performance mode, the arrangement of buttons, STOP and songs on wide screens, and the width of Edit mode.
+- In: the width of the app in performance mode, the arrangement of buttons, STOP and songs, and the width of Edit mode.
 - Out: the number of button columns (BTN-01 stays 4 per row on phones and 8 from `sm`), the song tiles (see SONG-20 to 26), and the dialogs.
 
 ## Acceptance criteria
@@ -17,14 +17,12 @@ The app is capped at 1024 px and centred, so on a tablet or laptop a lot of the 
 - [ ] **LAY-01** In performance mode the app uses the whole window width. The 1024 px cap is removed.
 - [ ] **LAY-02** The window can be any width from 320 px up without a horizontal scrollbar.
 
-### Narrow screens (below 1024 px)
-- [ ] **LAY-10** Below 1024 px the layout is as today: status row, occasion buttons and STOP on top, the song area below and scrolling on its own.
-
-### Wide screens (1024 px and up)
-- [ ] **LAY-11** From 1024 px the status row spans the full width. Below it are two columns: occasion buttons and STOP on the left, songs on the right.
-- [ ] **LAY-12** The left column takes about 3/5 of the width and the right column about 2/5.
-- [ ] **LAY-13** Both columns fit in the window height without the page scrolling. Only the song area scrolls (with its own scrollbar).
-- [ ] **LAY-14** The occasion buttons keep 8 per row and the same proportions as today, so they do not stretch into very wide buttons.
+### Arrangement
+- [ ] **LAY-10** At every width the status row, occasion buttons and STOP are on top, and the song area is below them, scrolling on its own.
+- [ ] **LAY-11** ~~Two columns from 1024 px.~~ (removed 2026-11-05: the DJ wants the tiles under the buttons on wide screens too)
+- [ ] **LAY-12** ~~Column proportions.~~ (removed)
+- [ ] **LAY-13** ~~Only the song area scrolls in two columns.~~ (removed)
+- [ ] **LAY-14** The occasion buttons keep 4 per row on phones and 8 per row from `sm` (BTN-01) at every width. The song grid adds tile columns as the window gets wider.
 
 ### Edit mode
 - [ ] **LAY-20** Edit mode keeps a readable width: its content is centred with a maximum width of 48 rem.
@@ -32,8 +30,8 @@ The app is capped at 1024 px and centred, so on a tablet or laptop a lot of the 
 
 ## Open questions
 
-- [x] **LAY-90** (agreed 2026-11-05) The switch to two columns is proposed at 1024 px (`lg`). A tablet in portrait (about 768 px) would get the stacked layout. Is that right?
-- [x] **LAY-91** (agreed 2026-11-05) A phone in landscape is wide enough for two columns only above 1024 px, which most phones are not. Is the stacked layout acceptable there?
+- [x] **LAY-90** ~~Switch to two columns at 1024 px.~~ (removed with LAY-11)
+- [x] **LAY-91** ~~Landscape phone layout.~~ (removed with LAY-11)
 
 ## Notes
 
