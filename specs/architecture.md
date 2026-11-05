@@ -35,6 +35,7 @@ A change that breaks an `[x]` property needs a spec change first, just like a be
 - [x] **ARCH-01** The app is a static single-page app with **no backend**. Vercel serves the built `dist/` and rewrites every path to `/index.html` (`vercel.json`).
 - [x] **ARCH-02** `index.html` is served with `Cache-Control: no-store`, and the hashed files under `/assets/*` are served as `immutable` for one year. This lets an installed iOS PWA pick up a new deploy without stalling.
 - [x] **ARCH-03** The app installs as a PWA in standalone mode (`public/manifest.json`). There is no service worker and no offline support.
+- [ ] **ARCH-06** *(proposed, F-019)* One serverless function (`api/share`) is the only server-side code. It stores read-only event snapshots and has no accounts, no Spotify data and no part in playback. Everything else stays local (ARCH-01 and ARCH-20 hold for events the user owns).
 - [x] **ARCH-04** Development runs on `http://127.0.0.1:5173`. Spotify requires https for redirect URIs except for loopback IP addresses, and browsers treat a loopback address as a secure origin, which the Web Playback SDK needs. (It used `@vitejs/plugin-basic-ssl` over `https://localhost` before 2026-11-05.)
 
 ### Security & identity
@@ -122,3 +123,4 @@ Short ADRs. Add new entries at the bottom and never edit an accepted one; supers
 | AD-3 | Spotify Connect on mobile instead of the SDK | Mobile browsers don't support the Web Playback SDK | Accepted |
 | AD-4 | Playlist import via Exportify CSV | Spotify's dev-mode API restrictions block direct playlist reads | Accepted |
 | AD-5 | MP3s in IndexedDB, not localStorage | Binary size; localStorage holds about 5 MB of strings | Accepted |
+| AD-6 | A small share endpoint instead of a full backend | Link sharing needs a server, but accounts, sync and hosted MP3s would cost much more to build and run (decided 2026-11-05, see F-019). Amends AD-1 | Proposed |

@@ -71,7 +71,7 @@ Songs can only be Spotify tracks today, while buttons can also use MP3. Allow MP
 *Landscape and tablet layout is covered by IDEA-08. Reordering songs is IDEA-01.*
 
 ### IDEA-15 Better event menu: create and share events more easily
-**Added:** 2026-11-05 · **Status:** new · **From:** EVT-01, EVT-10, EVT-12, EVT-30, EVT-31
+**Added:** 2026-11-05 · **Status:** partly promoted → F-019 (sharing by link). The menu redesign is still an idea · **From:** EVT-01, EVT-10, EVT-12, EVT-30, EVT-31
 The menu has "New event", "Open event", "Close event", "Export" and "Import", and it is unclear what the first three are for. Today "New" creates an event (empty or from a template), "Open" switches between the events stored in this browser, and "Close" only shows the empty "No active event" screen. Export and Import are the only way to move an event to another device or person, through a JSON file. Sharing and creating should be easier.
 Possible directions, not decided:
 - One "Events" screen with a card per event, replacing New / Open / Close. Each card can switch to, duplicate, rename, export and delete the event, and a "+ New event" card starts from a template or empty. "Close" probably goes away (the empty state is then only for first use).
