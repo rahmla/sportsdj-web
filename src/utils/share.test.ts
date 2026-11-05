@@ -63,14 +63,14 @@ describe('createShare', () => {
     expect(r.status).toBe(201)
     const id = r.body.id as string
     expect(isValidShareId(id)).toBe(true)
-    expect(JSON.parse(data.get(`share:${id}`)!).name).toBe('Final')
+    expect(JSON.parse(data.get(`share:${id}`)!).event.name).toBe('Final')
     expect(ttls.get(`share:${id}`)).toBe(SNAPSHOT_TTL_SECONDS)
   })
 
   test('SHARE-02 SHARE-33 the stored snapshot has no play counts', async () => {
     const { store, data } = memoryStore()
     const r = await createShare(sampleEvent(), 'ip', store)
-    const saved = JSON.parse(data.get(`share:${r.body.id}`)!)
+    const saved = JSON.parse(data.get(`share:${r.body.id}`)!).event
     expect(saved.songs.map((s: { playCount: number }) => s.playCount)).toEqual([0, 0])
   })
 
@@ -105,6 +105,15 @@ describe('getShare', () => {
     const r = await getShare(body.id, store)
     expect(r.status).toBe(200)
     expect((r.body.event as { name: string }).name).toBe('Final')
+  })
+
+  test('SHARE-20 the number of left-out MP3 buttons is stored and returned for the preview', async () => {
+    const { store } = memoryStore()
+    const ev = sampleEvent()
+    ev.occasionButtons.push({ id: 'b3', label: 'HORN', colorHex: '#123456', startOffset: 0, audioSource: { type: 'mp3', uri: '', name: 'h.mp3', fileKey: 'k' } })
+    const created = await createShare(ev, 'ip', store)
+    expect(created.body.mp3Buttons).toBe(1)
+    expect((await getShare(created.body.id, store)).body.mp3Buttons).toBe(1)
   })
 
   test('SHARE-14 an unknown or malformed id gives 404', async () => {

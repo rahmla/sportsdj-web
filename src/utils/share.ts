@@ -62,14 +62,14 @@ export async function createShare(body: unknown, clientId: string, store: ShareS
 
   const checked = validateEvent(body)
   if (!checked.ok) return { status: 400, body: { error: checked.error } }
-  const { snapshot } = toSnapshot(checked.event)
-  const json = JSON.stringify(snapshot)
+  const { snapshot, mp3Buttons } = toSnapshot(checked.event)
+  const json = JSON.stringify({ v: 1, mp3Buttons, event: snapshot })
   if (new TextEncoder().encode(json).length > MAX_SNAPSHOT_BYTES) {
     return { status: 413, body: { error: 'This event is too large to share' } }
   }
   const id = createShareId()
   await store.set(`share:${id}`, json, SNAPSHOT_TTL_SECONDS)
-  return { status: 201, body: { id } }
+  return { status: 201, body: { id, mp3Buttons } }
 }
 
 /** GET /api/share/<id> (SHARE-14, SHARE-90) */
@@ -78,5 +78,6 @@ export async function getShare(id: unknown, store: ShareStore): Promise<ApiResul
   const raw = await store.get(`share:${id}`)
   if (!raw) return { status: 404, body: { error: 'not_found' } }
   await store.touch(`share:${id}`, SNAPSHOT_TTL_SECONDS)
-  return { status: 200, body: { event: JSON.parse(raw) } }
+  const stored = JSON.parse(raw) as { mp3Buttons?: number; event: unknown }
+  return { status: 200, body: { event: stored.event, mp3Buttons: stored.mp3Buttons ?? 0 } }
 }

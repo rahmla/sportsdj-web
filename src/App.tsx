@@ -5,6 +5,9 @@ import { PerformanceView } from './components/PerformanceView'
 import { EditView } from './components/EditView'
 import type { DJEvent } from './types'
 import { BUILT_IN_TEMPLATES } from './utils/templates'
+import { ShareDialog } from './components/ShareDialog'
+import { SharedEventDialog } from './components/SharedEventDialog'
+import { PENDING_SHARE_KEY, parseSharePath } from './utils/shareClient'
 
 // ─── Login screen ────────────────────────────────────────────────────────────
 
@@ -206,6 +209,7 @@ function Header({
   onOpen,
   onClose,
   onExport,
+  onShare,
   onImport,
   importError,
   spotifyReady,
@@ -219,6 +223,7 @@ function Header({
   onOpen: () => void
   onClose: () => void
   onExport: () => void
+  onShare: () => void
   onImport: (file: File) => void
   importError: string | null
   spotifyReady: boolean
@@ -271,6 +276,11 @@ function Header({
               </button>
             )}
             <div className="border-t border-gray-700" />
+            {hasActiveEvent && (
+              <button className={menuItem} onClick={() => { onShare(); setOpen(false) }}>
+                <span>🔗</span> Share
+              </button>
+            )}
             <button className={menuItem} onClick={() => { onExport(); setOpen(false) }}>
               <span>⬇️</span> Export
             </button>
@@ -404,6 +414,22 @@ export default function App() {
   const [showNew, setShowNew] = useState(false)
   const [showOpen, setShowOpen] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
+  const [showShare, setShowShare] = useState(false)
+  // A share link survives the Spotify login redirect through localStorage (SHARE-11)
+  const [pendingShareId, setPendingShareId] = useState<string | null>(() => {
+    try {
+      const fromPath = parseSharePath(window.location.pathname)
+      if (fromPath) localStorage.setItem(PENDING_SHARE_KEY, fromPath)
+      return fromPath ?? localStorage.getItem(PENDING_SHARE_KEY)
+    } catch {
+      return null
+    }
+  })
+  function closeSharedEvent() {
+    try { localStorage.removeItem(PENDING_SHARE_KEY) } catch { /* ignore */ }
+    setPendingShareId(null)
+    if (parseSharePath(window.location.pathname)) window.history.replaceState({}, '', '/')
+  }
 
   // OAuth callback spinner — only show while we have a code and no error yet
   const isOAuthCallback = new URLSearchParams(window.location.search).has('code')
@@ -459,6 +485,7 @@ export default function App() {
           onOpen={() => setShowOpen(true)}
           onClose={() => { closeEvent(); setIsEditing(false) }}
           onExport={() => activeEvent && exportEvent(activeEvent)}
+          onShare={() => setShowShare(true)}
           onImport={handleImport}
           importError={importError}
           spotifyReady={spotify.isReady}
@@ -520,6 +547,19 @@ export default function App() {
           onConfirm={(name, sport) => { addEvent(name, sport); setShowNew(false) }}
           onConfirmFromTemplate={tpl => { addEventFromTemplate(tpl); setShowNew(false); setIsEditing(false) }}
           onCancel={() => setShowNew(false)}
+        />
+      )}
+
+      {showShare && activeEvent && (
+        <ShareDialog event={activeEvent} onClose={() => setShowShare(false)} />
+      )}
+
+      {/* Wait until editing is done, so unsaved edits are never lost (SHARE-42) */}
+      {pendingShareId && !isEditing && (
+        <SharedEventDialog
+          id={pendingShareId}
+          onAdd={ev => { addEventFromTemplate(ev); closeSharedEvent() }}
+          onClose={closeSharedEvent}
         />
       )}
 
