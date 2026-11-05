@@ -1,5 +1,5 @@
-import type { DJEvent } from '../types'
-import { validateEvent } from './eventValidation'
+import type { DJEvent } from '../types/index.js'
+import { validateEvent } from './eventValidation.js'
 
 export const MAX_SNAPSHOT_BYTES = 200 * 1024
 export const SNAPSHOT_TTL_SECONDS = 90 * 24 * 60 * 60 // SHARE-90

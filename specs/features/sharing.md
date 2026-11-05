@@ -17,7 +17,7 @@ Today an event can only be moved between devices or people as a JSON file (EVT-3
 ### Creating a link
 - [ ] **SHARE-01** The menu has a "Share" item for the active event.
 - [ ] **SHARE-02** Share uploads a snapshot of the event, in the existing event JSON format (ARCH-22) with all play counts set to 0, and shows a link of the form `https://sportsdj-web.vercel.app/s/<id>`.
-- [ ] **SHARE-03** The id is random and unguessable (at least 72 bits of randomness). There is no list of shared events.
+- [x] **SHARE-03** The id is random and unguessable (at least 72 bits of randomness). There is no list of shared events.
 - [ ] **SHARE-04** The link is shown with a "Copy" button and a QR code. On devices that support it, a "Share…" button opens the system share sheet.
 - [ ] **SHARE-05** Every Share creates a new snapshot. Changing the event afterwards does not change links already created.
 
@@ -25,22 +25,22 @@ Today an event can only be moved between devices or people as a JSON file (EVT-3
 - [ ] **SHARE-10** Opening `/s/<id>` shows a preview with the event name, sport, number of buttons with a source and number of songs, and an "Add to my events" button.
 - [ ] **SHARE-11** If the user is not logged in to Spotify, they log in first and then return to the same preview (the link survives the login redirect).
 - [ ] **SHARE-12** "Add to my events" saves a copy as a new event with a fresh id and play counts 0, and makes it active (same as EVT-31).
-- [ ] **SHARE-13** The imported data is validated before it is saved (EVT-40, ARCH-24). An invalid snapshot is rejected with a clear message.
+- [x] **SHARE-13** The imported data is validated before it is saved (EVT-40, ARCH-24). An invalid snapshot is rejected with a clear message.
 - [ ] **SHARE-14** An unknown or expired link shows "This link does not exist or has expired", with a button to the app.
 
 ### MP3 buttons
 - [ ] **SHARE-20** MP3 sources are not part of a snapshot. Buttons that used an MP3 arrive as empty buttons with their label and colour, and the preview says how many MP3 buttons will not be included.
 
 ### Server
-- [ ] **SHARE-30** `POST /api/share` accepts an event JSON of at most 200 KB, checks its shape, stores it, and returns its id. `GET /api/share/<id>` returns the snapshot. Neither needs a login.
-- [ ] **SHARE-31** Sharing is rate limited per client (proposed: 20 snapshots per hour).
-- [ ] **SHARE-32** Snapshots are deleted after a fixed time (see SHARE-90).
-- [ ] **SHARE-33** The server stores only the event contents. No Spotify token, user id or other personal data is sent to or stored on the server.
+- [x] **SHARE-30** `POST /api/share` accepts an event JSON of at most 200 KB, checks its shape, stores it, and returns its id. `GET /api/share/<id>` returns the snapshot. Neither needs a login.
+- [x] **SHARE-31** Sharing is rate limited per client (proposed: 20 snapshots per hour).
+- [x] **SHARE-32** Snapshots are deleted after a fixed time (see SHARE-90).
+- [x] **SHARE-33** The server stores only the event contents. No Spotify token, user id or other personal data is sent to or stored on the server.
 
 ## Edge cases & errors
 
 - [ ] **SHARE-40** If the server cannot be reached, Share shows an error and Export (file) still works. No local data is changed or lost.
-- [ ] **SHARE-41** An event over the size limit shows "This event is too large to share" and nothing is uploaded.
+- [x] **SHARE-41** An event over the size limit shows "This event is too large to share" and nothing is uploaded.
 - [ ] **SHARE-42** Opening a link while an event is being edited does not discard the unsaved edits (see EVT-92).
 
 ## Decisions (agreed 2026-11-05)

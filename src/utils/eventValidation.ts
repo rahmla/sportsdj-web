@@ -1,4 +1,4 @@
-import type { AudioSource, DJEvent, OccasionButton, SongItem } from '../types'
+import type { AudioSource, DJEvent, OccasionButton, SongItem } from '../types/index.js'
 
 export const MAX_BUTTONS = 40
 export const MAX_SONGS = 1000

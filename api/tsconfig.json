@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": ["./**/*.ts", "../src/utils/share.ts", "../src/utils/eventValidation.ts", "../src/types/index.ts"]
+}

@@ -1,5 +1,5 @@
 import { Redis } from '@upstash/redis'
-import type { ShareStore } from '../../src/utils/share'
+import type { ShareStore } from '../../src/utils/share.js'
 
 /** Redis-backed store. The Upstash integration sets KV_REST_API_* (or UPSTASH_REDIS_REST_*). */
 export function redisStore(): ShareStore {
