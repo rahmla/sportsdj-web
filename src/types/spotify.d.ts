@@ -65,7 +65,6 @@ declare namespace Spotify {
     | 'playback_error'
 
   interface Player {
-    new (options: PlayerInit): Player
     connect(): Promise<boolean>
     disconnect(): void
     addListener(event: 'ready', cb: (instance: WebPlaybackInstance) => void): boolean

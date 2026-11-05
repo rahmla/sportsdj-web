@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { DJEvent } from '../types'
 import {
@@ -26,15 +26,16 @@ export function useEvents(userId: string | null): EventsHook {
   const [events, setEventsState] = useState<DJEvent[]>([])
   const [activeEventId, setActiveEventIdState] = useState<string | null>(null)
 
-  // Load events when userId becomes available
-  useEffect(() => {
-    if (!userId) return
+  // Load events when userId becomes available. Done during render (not in an effect)
+  // so state is set once, without an extra render pass.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  if (userId && loadedFor !== userId) {
+    setLoadedFor(userId)
     const loaded = loadEvents(userId)
-    setEventsState(loaded)
     const saved = loadActiveEventId(userId)
-    const activeId = (saved && loaded.find(e => e.id === saved)) ? saved : (loaded[0]?.id ?? null)
-    setActiveEventIdState(activeId)
-  }, [userId])
+    setEventsState(loaded)
+    setActiveEventIdState((saved && loaded.find(e => e.id === saved)) ? saved : (loaded[0]?.id ?? null))
+  }
 
   const CLOSED = '__closed__'
   const activeEvent = activeEventId === CLOSED ? null : (events.find(e => e.id === activeEventId) ?? events[0] ?? null)
