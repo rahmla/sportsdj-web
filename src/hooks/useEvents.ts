@@ -8,6 +8,7 @@ import {
   saveActiveEventId,
   createDefaultEvent,
 } from '../utils/storage'
+import { eventFileName, parseEventFile, serializeEvent } from '../utils/eventFile'
 
 export interface EventsHook {
   events: DJEvent[]
@@ -91,12 +92,12 @@ export function useEvents(userId: string | null): EventsHook {
   }, [events, activeEventId, userId, setEvents, setActiveEventId])
 
   const exportEvent = useCallback((event: DJEvent) => {
-    const json = JSON.stringify(event, null, 2)
+    const json = serializeEvent(event)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${event.name.replace(/\s+/g, '_')}.sportsdj.json`
+    a.download = eventFileName(event)
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -108,14 +109,13 @@ export function useEvents(userId: string | null): EventsHook {
       const reader = new FileReader()
       reader.onload = (e) => {
         try {
-          const parsed = JSON.parse(e.target?.result as string) as DJEvent
-          const imported: DJEvent = { ...parsed, id: uuidv4() }
+          const imported = parseEventFile(e.target?.result as string)
           const updated = [...events, imported]
           setEvents(updated)
           setActiveEventId(imported.id)
           resolve()
-        } catch {
-          reject(new Error('Invalid event file'))
+        } catch (err) {
+          reject(err instanceof Error ? err : new Error('Invalid event file'))
         }
       }
       reader.onerror = () => reject(new Error('Could not read file'))

@@ -2,6 +2,8 @@ import { useState, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { DJEvent, OccasionButton, SongItem, AudioSource } from '../types'
 import { saveMp3, deleteMp3 } from '../utils/mp3Storage'
+import { normalizeSpotifyUri } from '../utils/spotifyUri'
+import { parseExportifyCsv } from '../utils/csv'
 
 interface SpotifyPreview {
   isReady: boolean
@@ -73,15 +75,6 @@ function toEditingSong(song: SongItem): EditingSong {
   }
 }
 
-function normalizeSpotifyUri(input: string): string {
-  const trimmed = input.trim()
-  if (!trimmed) return ''
-  if (trimmed.startsWith('spotify:')) return trimmed
-  const match = trimmed.match(/open\.spotify\.com\/(track|playlist|album)\/([A-Za-z0-9]+)/)
-  if (match) return `spotify:${match[1]}:${match[2]}`
-  return trimmed
-}
-
 function fromEditingButton(eb: EditingButton): OccasionButton {
   let audioSource: AudioSource | undefined
   if (eb.sourceType === 'mp3' && eb.fileKey) {
@@ -101,25 +94,6 @@ function fromEditingSong(es: EditingSong): SongItem {
     ? { type: isPlaylist ? 'spotifyPlaylist' : 'spotifyTrack', uri, name: es.title }
     : undefined
   return { id: es.id, title: es.title, audioSource, startOffset: parseFloat(es.startOffset) || 0, order: es.order, playCount: es.playCount }
-}
-
-function parseCsvRow(row: string): string[] {
-  const fields: string[] = []
-  let cur = ''
-  let inQuotes = false
-  for (let i = 0; i < row.length; i++) {
-    const ch = row[i]
-    if (ch === '"') {
-      if (inQuotes && row[i + 1] === '"') { cur += '"'; i++ }
-      else inQuotes = !inQuotes
-    } else if (ch === ',' && !inQuotes) {
-      fields.push(cur); cur = ''
-    } else {
-      cur += ch
-    }
-  }
-  fields.push(cur)
-  return fields
 }
 
 export function EditView({ profile, onUpdate, onDone, initialExpandedSongId, spotifyToken, spotify }: Props) {
@@ -149,24 +123,9 @@ export function EditView({ profile, onUpdate, onDone, initialExpandedSongId, spo
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string
-        const lines = text.split(/\r?\n/).filter(l => l.trim())
-        if (lines.length < 2) throw new Error('CSV file is empty')
-        const headers = parseCsvRow(lines[0]).map(h => h.trim().toLowerCase())
-        const trackNameIdx = headers.findIndex(h => h === 'track name')
-        const artistIdx = headers.findIndex(h => h.includes('artist name'))
-        const uriIdx = headers.findIndex(h => h.includes('uri'))
-        if (uriIdx === -1) throw new Error('No URI column found. Make sure this is an Exportify CSV.')
-        const newSongs: EditingSong[] = []
-        for (let i = 1; i < lines.length; i++) {
-          const cols = parseCsvRow(lines[i])
-          const uri = cols[uriIdx]?.trim()
-          if (!uri?.startsWith('spotify:track:')) continue
-          const trackName = trackNameIdx !== -1 ? cols[trackNameIdx]?.trim() ?? '' : ''
-          const artist = (artistIdx !== -1 ? cols[artistIdx]?.trim() ?? '' : '').replace(/;/g, ', ')
-          const title = trackName && artist ? `${trackName} – ${artist}` : trackName || uri
-          newSongs.push({ id: uuidv4(), title, uriInput: uri, uriName: trackName, uriType: 'spotifyTrack', startOffset: '0', order: newSongs.length, playCount: 0 })
-        }
-        if (newSongs.length === 0) throw new Error('No tracks found in CSV')
+        const newSongs: EditingSong[] = parseExportifyCsv(text).map((t, i) => (
+          { id: uuidv4(), title: t.title, uriInput: t.uri, uriName: t.trackName, uriType: 'spotifyTrack', startOffset: '0', order: i, playCount: 0 }
+        ))
         setSongs(prev => [...prev, ...newSongs.map((s, i) => ({ ...s, order: prev.length + i }))])
       } catch (err) {
         setImportError(err instanceof Error ? err.message : 'CSV import failed')
